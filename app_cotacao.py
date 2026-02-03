@@ -904,37 +904,51 @@ def cotar():
     """Rota para executar cotacao."""
     global primeira_cotacao, driver_global
 
-    dados = request.get_json()
-    cidades = dados.get('cidades', [])
+    try:
+        dados = request.get_json()
+        cidades = dados.get('cidades', [])
 
-    if not cidades:
-        return jsonify({"erro": "Nenhuma cidade informada"}), 400
+        if not cidades:
+            return jsonify({"erro": "Nenhuma cidade informada"}), 400
 
-    resultados = []
+        resultados = []
 
-    for i, cidade in enumerate(cidades):
-        cidade = cidade.strip()
-        if cidade:
-            print(f"\n{'='*50}")
-            print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
-            print(f"{'='*50}")
+        for i, cidade in enumerate(cidades):
+            cidade = cidade.strip()
+            if cidade:
+                print(f"\n{'='*50}")
+                print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
+                print(f"{'='*50}")
 
-            if i == 0 or primeira_cotacao or driver_global is None:
-                # Primeira cidade: faz o fluxo completo
-                resultado = cotar_cidade(cidade)
-                primeira_cotacao = False
-            else:
-                # Demais cidades: volta para tela de cidade e cota
-                voltar_para_cidade(driver_global)
-                resultado = cotar_proxima_cidade(cidade)
+                try:
+                    if i == 0 or primeira_cotacao or driver_global is None:
+                        # Primeira cidade: faz o fluxo completo
+                        resultado = cotar_cidade(cidade)
+                        primeira_cotacao = False
+                    else:
+                        # Demais cidades: volta para tela de cidade e cota
+                        voltar_para_cidade(driver_global)
+                        resultado = cotar_proxima_cidade(cidade)
+                except Exception as e:
+                    print(f"[ERRO] Excecao ao cotar {cidade}: {str(e)}")
+                    resultado = {
+                        "cidade": cidade,
+                        "sucesso": False,
+                        "erro": str(e)
+                    }
+                    primeira_cotacao = True
 
-            resultados.append(resultado)
+                resultados.append(resultado)
 
-            # Se deu erro, tenta o fluxo completo na proxima
-            if not resultado.get("sucesso"):
-                primeira_cotacao = True
+                # Se deu erro, tenta o fluxo completo na proxima
+                if not resultado.get("sucesso"):
+                    primeira_cotacao = True
 
-    return jsonify(resultados)
+        return jsonify(resultados)
+
+    except Exception as e:
+        print(f"[ERRO] Excecao geral na rota /cotar: {str(e)}")
+        return jsonify([{"cidade": "N/A", "sucesso": False, "erro": f"Erro geral: {str(e)}"}]), 500
 
 
 @app.route('/status')
