@@ -1,0 +1,14 @@
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+*.md
+*.txt
+!requirements.txt
+app.py
+automacao_cotador.py
+fluxo_cotacao_hapvida.py
+app_cotacao_backup.py
+nul
+static

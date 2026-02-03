@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+*.log
+app.py
+automacao_cotador.py
+fluxo_cotacao_hapvida.py
+app_cotacao_backup.py
+nul
+static/
+DOCUMENTACAO_FLUXO.txt

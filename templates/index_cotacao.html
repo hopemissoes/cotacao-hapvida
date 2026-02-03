@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotacao Hapvida - Sistema de Cotacao</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+
+        .status-dot.online {
+            background: #4caf50;
+        }
+
+        .status-dot.offline {
+            background: #f44336;
+        }
+
+        .btn-login {
+            padding: 8px 20px;
+            background: #f7941d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #e8850d;
+        }
+
+        .form-section {
+            margin-bottom: 25px;
+        }
+
+        .form-section h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 150px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        .form-group small {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .btn-cotar {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-cotar:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn-cotar:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1e3c72;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .results-section h3 {
+            color: #1e3c72;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .result-card {
+            background: #f9f9f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1e3c72;
+        }
+
+        .result-card.error {
+            border-left-color: #f44336;
+            background: #fff5f5;
+        }
+
+        .result-card h4 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-card h4 .badge {
+            font-size: 12px;
+            padding: 4px 10px;
+            background: #4caf50;
+            color: white;
+            border-radius: 20px;
+        }
+
+        .result-card h4 .badge.error {
+            background: #f44336;
+        }
+
+        .valores-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .valores-table th,
+        .valores-table td {
+            padding: 10px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .valores-table th {
+            background: #1e3c72;
+            color: white;
+        }
+
+        .valores-table tr:nth-child(even) {
+            background: #f5f5f5;
+        }
+
+        .valores-table tr:hover {
+            background: #e8f4fc;
+        }
+
+        .json-output {
+            margin-top: 15px;
+        }
+
+        .json-output summary {
+            cursor: pointer;
+            color: #1e3c72;
+            font-weight: 500;
+            padding: 10px;
+            background: #e8f4fc;
+            border-radius: 6px;
+        }
+
+        .json-output pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .btn-copy {
+            padding: 6px 12px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+
+        .btn-copy:hover {
+            background: #45a049;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Cotacao Hapvida</h1>
+            <p>Sistema automatizado de cotacao de planos de saude</p>
+        </div>
+
+        <div class="main-card">
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">Verificando...</span>
+                </div>
+                <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Iniciar Sessao</button>
+            </div>
+
+            <div class="form-section">
+                <h3>Cidades para Cotar</h3>
+                <div class="form-group">
+                    <label for="cidades">Digite as cidades (uma por linha):</label>
+                    <textarea id="cidades" placeholder="Recife&#10;Fortaleza&#10;Salvador&#10;Natal&#10;..."></textarea>
+                    <small>Exemplo: Digite "Recife" e o sistema buscara "Recife - PE" automaticamente</small>
+                </div>
+                <button class="btn-cotar" id="btnCotar" onclick="executarCotacao()">
+                    Iniciar Cotacao
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p id="loadingText">Processando cotacoes...</p>
+            </div>
+
+            <div class="results-section" id="resultsSection">
+                <h3>Resultados das Cotacoes</h3>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Desenvolvido com Claude AI | 2025</p>
+        </div>
+    </div>
+
+    <script>
+        // Verifica status ao carregar
+        document.addEventListener('DOMContentLoaded', verificarStatus);
+
+        function verificarStatus() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    const dot = document.getElementById('statusDot');
+                    const text = document.getElementById('statusText');
+                    const btn = document.getElementById('btnLogin');
+
+                    if (data.logado) {
+                        dot.className = 'status-dot online';
+                        text.textContent = 'Conectado ao Cotador Simplificado';
+                        btn.textContent = 'Reconectar';
+                    } else if (data.navegador_ativo) {
+                        dot.className = 'status-dot';
+                        text.textContent = 'Navegador ativo, nao logado';
+                        btn.textContent = 'Fazer Login';
+                    } else {
+                        dot.className = 'status-dot offline';
+                        text.textContent = 'Desconectado';
+                        btn.textContent = 'Iniciar Sessao';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('statusText').textContent = 'Erro ao verificar status';
+                });
+        }
+
+        function fazerLogin() {
+            const btn = document.getElementById('btnLogin');
+            btn.disabled = true;
+            btn.textContent = 'Conectando...';
+
+            fetch('/login', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso) {
+                        alert('Login realizado com sucesso!');
+                    } else {
+                        alert('Falha no login. Verifique o navegador.');
+                    }
+                    verificarStatus();
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    alert('Erro ao fazer login: ' + err);
+                    btn.disabled = false;
+                    verificarStatus();
+                });
+        }
+
+        function executarCotacao() {
+            const textarea = document.getElementById('cidades');
+            const cidades = textarea.value.split('\n').filter(c => c.trim());
+
+            if (cidades.length === 0) {
+                alert('Digite pelo menos uma cidade!');
+                return;
+            }
+
+            // Mostra loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('btnCotar').disabled = true;
+
+            let cidadesProcessadas = 0;
+            const totalCidades = cidades.length;
+
+            function atualizarLoading() {
+                document.getElementById('loadingText').textContent =
+                    `Processando ${cidadesProcessadas + 1} de ${totalCidades}: ${cidades[cidadesProcessadas]}...`;
+            }
+
+            atualizarLoading();
+
+            fetch('/cotar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cidades: cidades })
+            })
+            .then(response => response.json())
+            .then(data => {
+                exibirResultados(data);
+            })
+            .catch(err => {
+                alert('Erro ao executar cotacao: ' + err);
+            })
+            .finally(() => {
+                document.getElementById('loading').classList.remove('show');
+                document.getElementById('btnCotar').disabled = false;
+            });
+        }
+
+        function exibirResultados(resultados) {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = '';
+
+            resultados.forEach((resultado, index) => {
+                const card = document.createElement('div');
+                card.className = 'result-card' + (resultado.sucesso === false ? ' error' : '');
+
+                if (resultado.sucesso === false) {
+                    card.innerHTML = `
+                        <h4>
+                            ${resultado.cidade}
+                            <span class="badge error">Erro</span>
+                        </h4>
+                        <p>Erro: ${resultado.erro || 'Erro desconhecido'}</p>
+                    `;
+                } else {
+                    let tableRows = '';
+                    resultado.valores.forEach(v => {
+                        tableRows += `<tr><td>${v.faixa_etaria}</td><td>${v.valor}</td></tr>`;
+                    });
+
+                    const jsonStr = JSON.stringify(resultado.valores, null, 2);
+
+                    card.innerHTML = `
+                        <h4>
+                            ${resultado.cidade}
+                            <span class="badge">Sucesso</span>
+                        </h4>
+                        <table class="valores-table">
+                            <thead>
+                                <tr><th>Faixa Etaria</th><th>Valor</th></tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
+                        <details class="json-output">
+                            <summary>
+                                Ver JSON
+                                <button class="btn-copy" onclick="copiarJSON(${index})">Copiar</button>
+                            </summary>
+                            <pre id="json-${index}">${jsonStr}</pre>
+                        </details>
+                    `;
+                }
+
+                container.appendChild(card);
+            });
+
+            document.getElementById('resultsSection').classList.add('show');
+
+            // Salva resultados globalmente para copiar
+            window.resultadosGlobais = resultados;
+        }
+
+        function copiarJSON(index) {
+            const json = JSON.stringify(window.resultadosGlobais[index].valores, null, 2);
+            navigator.clipboard.writeText(json).then(() => {
+                alert('JSON copiado!');
+            });
+        }
+    </script>
+</body>
+</html>
