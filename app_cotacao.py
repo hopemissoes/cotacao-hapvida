@@ -147,9 +147,18 @@ def iniciar_navegador():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--remote-debugging-port=9222")
 
-    service = Service(ChromeDriverManager().install())
-    driver_global = webdriver.Chrome(service=service, options=chrome_options)
+    # Tenta usar o ChromeDriver do sistema primeiro, senao usa webdriver-manager
+    try:
+        # ChromeDriver instalado no sistema (Docker)
+        service = Service("/usr/local/bin/chromedriver")
+        driver_global = webdriver.Chrome(service=service, options=chrome_options)
+        print("[*] Usando ChromeDriver do sistema")
+    except Exception as e:
+        print(f"[*] ChromeDriver do sistema nao encontrado, usando webdriver-manager: {e}")
+        service = Service(ChromeDriverManager().install())
+        driver_global = webdriver.Chrome(service=service, options=chrome_options)
 
     return driver_global
 
