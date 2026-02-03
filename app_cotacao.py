@@ -133,8 +133,9 @@ def clicar_elemento_seguro(driver, elemento, tentativas=3):
 
 
 def iniciar_navegador():
-    """Inicia o navegador Chrome."""
+    """Inicia o navegador Chrome/Chromium."""
     global driver_global
+    import os
 
     print("[*] Iniciando navegador...")
 
@@ -149,16 +150,36 @@ def iniciar_navegador():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--remote-debugging-port=9222")
 
-    # Tenta usar o ChromeDriver do sistema primeiro, senao usa webdriver-manager
-    try:
-        # ChromeDriver instalado no sistema (Docker)
-        service = Service("/usr/local/bin/chromedriver")
-        driver_global = webdriver.Chrome(service=service, options=chrome_options)
-        print("[*] Usando ChromeDriver do sistema")
-    except Exception as e:
-        print(f"[*] ChromeDriver do sistema nao encontrado, usando webdriver-manager: {e}")
-        service = Service(ChromeDriverManager().install())
-        driver_global = webdriver.Chrome(service=service, options=chrome_options)
+    # Se estiver usando Chromium (Docker), configura o binario
+    chromium_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
+    if os.path.exists(chromium_bin):
+        chrome_options.binary_location = chromium_bin
+        print(f"[*] Usando Chromium: {chromium_bin}")
+
+    # Lista de caminhos para o ChromeDriver
+    chromedriver_paths = [
+        os.environ.get("CHROMEDRIVER_PATH", ""),
+        "/usr/bin/chromedriver",
+        "/usr/local/bin/chromedriver",
+    ]
+
+    # Tenta usar o ChromeDriver do sistema primeiro
+    for path in chromedriver_paths:
+        if path and os.path.exists(path):
+            try:
+                print(f"[*] Tentando ChromeDriver: {path}")
+                service = Service(path)
+                driver_global = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"[OK] Usando ChromeDriver do sistema: {path}")
+                return driver_global
+            except Exception as e:
+                print(f"[AVISO] Falhou com {path}: {e}")
+                continue
+
+    # Fallback: usa webdriver-manager
+    print("[*] Usando webdriver-manager como fallback...")
+    service = Service(ChromeDriverManager().install())
+    driver_global = webdriver.Chrome(service=service, options=chrome_options)
 
     return driver_global
 
