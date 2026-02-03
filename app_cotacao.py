@@ -970,6 +970,9 @@ def fechar():
 # ============================================
 
 if __name__ == '__main__':
+    import os
+    port = int(os.environ.get('PORT', 5000))
+
     print("\n" + "="*60)
     print("  APLICACAO WEB - COTACAO HAPVIDA")
     print("="*60)
@@ -982,6 +985,4 @@ if __name__ == '__main__':
     print("    GET  /fechar   - Fechar navegador")
     print("\n" + "="*60 + "\n")
 
-    import os
-    port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port, threaded=True)
