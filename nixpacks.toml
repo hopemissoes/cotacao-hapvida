@@ -1,7 +1,8 @@
 # Configuracao Nixpacks para Cotacao Hapvida
 
 [phases.setup]
-nixPkgs = ["chromium", "chromedriver"]
+nixPkgs = ["google-chrome", "chromedriver", "chromium"]
+aptPkgs = ["chromium", "chromium-driver", "libnss3", "libatk-bridge2.0-0", "libdrm2", "libxkbcommon0", "libgbm1"]
 
 [phases.install]
 cmds = ["pip install -r requirements.txt"]
@@ -10,6 +11,7 @@ cmds = ["pip install -r requirements.txt"]
 CHROME_BIN = "/usr/bin/chromium"
 CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 PYTHONUNBUFFERED = "1"
+DISPLAY = ":99"
 
 [start]
 cmd = "python app_cotacao.py"
