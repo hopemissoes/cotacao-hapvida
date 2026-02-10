@@ -140,14 +140,25 @@ def iniciar_navegador():
     print("[*] Iniciando navegador...")
 
     chrome_options = Options()
+    # Opcoes basicas
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument("--disable-notifications")
     chrome_options.add_argument("--disable-popup-blocking")
-    chrome_options.add_argument("--headless")  # Roda sem janela (necessario para VPS)
+    chrome_options.add_argument("--window-size=1920,1080")
+
+    # Opcoes para rodar em container/VPS
+    chrome_options.add_argument("--headless=new")  # Novo modo headless
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-setuid-sandbox")
+    chrome_options.add_argument("--single-process")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--disable-background-networking")
+    chrome_options.add_argument("--disable-default-apps")
     chrome_options.add_argument("--remote-debugging-port=9222")
 
     # Se estiver usando Chromium (Docker), configura o binario
