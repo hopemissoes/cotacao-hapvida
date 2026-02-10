@@ -433,129 +433,46 @@ def cotar_cidade(cidade):
 
         # Aguarda o dropdown carregar
         adicionar_log("Aguardando dropdown de cidades...", "info")
-        time.sleep(3)
+        time.sleep(2)
 
-        # Tenta selecionar a cidade do dropdown
-        cidade_selecionada = False
-        max_tentativas = 3
-
-        for tentativa in range(max_tentativas):
-            adicionar_log(f"Tentativa {tentativa + 1} de selecionar cidade...", "info")
-
-            # METODO 1: Usar teclas do teclado (mais confiavel para autocomplete)
+        # Clica na opcao do dropdown (logica original que funcionava)
+        adicionar_log(f"Buscando '{cidade}' no dropdown...", "info")
+        try:
+            opcao_cidade = wait.until(
+                EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
+            )
+            opcao_cidade.click()
+            adicionar_log(f"Clicou em '{cidade}' (metodo 1)", "sucesso")
+        except:
             try:
-                from selenium.webdriver.common.keys import Keys
-                adicionar_log("Tentando selecionar via teclas (seta baixo + Enter)...", "info")
-
-                # Foca no campo
-                campo_cidade.click()
-                time.sleep(0.5)
-
-                # Pressiona seta para baixo para selecionar primeira opcao
-                campo_cidade.send_keys(Keys.ARROW_DOWN)
-                time.sleep(0.5)
-
-                # Pressiona Enter para confirmar
-                campo_cidade.send_keys(Keys.ENTER)
-                time.sleep(1)
-
-                adicionar_log("Teclas enviadas (DOWN + ENTER)", "info")
-            except Exception as e:
-                adicionar_log(f"Erro ao usar teclas: {e}", "aviso")
-
-            # Se nao funcionou, tenta clicar no elemento do dropdown
-            time.sleep(1)
-
-            # Verifica se funcionou antes de tentar clique
-            valor_campo = campo_cidade.get_attribute("value") or ""
-            if " - " in valor_campo:
-                adicionar_log(f"Cidade selecionada via teclado: {valor_campo}", "sucesso")
-                cidade_selecionada = True
-                break
-
-            # METODO 2: Tenta clicar nos elementos do dropdown
-            adicionar_log("Tentando clicar no dropdown...", "info")
-
-            # Procura por elementos que parecem ser itens de dropdown
-            seletores_dropdown = [
-                f"//div[contains(@class, 'dropdown')]//div[contains(text(), '{cidade}')]",
-                f"//ul//li[contains(text(), '{cidade}')]",
-                f"//div[contains(@class, 'option')][contains(text(), '{cidade}')]",
-                f"//div[contains(@class, 'item')][contains(text(), '{cidade}')]",
-                f"//div[contains(@class, 'suggestion')][contains(text(), '{cidade}')]",
-                f"//div[contains(@class, 'result')][contains(text(), '{cidade}')]",
-                f"//span[contains(text(), '{cidade} -')]",
-                f"//div[contains(text(), '{cidade} -')]",
-                f"//*[contains(text(), '{cidade} - ')]",
-            ]
-
-            for seletor in seletores_dropdown:
-                try:
-                    elementos = driver.find_elements(By.XPATH, seletor)
-                    for elem in elementos:
-                        try:
-                            if elem.is_displayed() and elem != campo_cidade:
-                                texto_elem = elem.text
-                                adicionar_log(f"Encontrado elemento: '{texto_elem}'", "info")
-
-                                # Verifica se e um item de dropdown (contem cidade + UF)
-                                if cidade.lower() in texto_elem.lower():
-                                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-                                    time.sleep(0.3)
-                                    driver.execute_script("arguments[0].click();", elem)
-                                    adicionar_log(f"Clicou no elemento: '{texto_elem}'", "info")
-                                    time.sleep(1)
-                                    break
-                        except:
-                            continue
-                except:
-                    continue
-
-            # VERIFICACAO: Checa se a cidade foi realmente selecionada
-            time.sleep(1)
-            adicionar_log("Verificando se cidade foi selecionada...", "info")
-
-            # Verifica o valor do campo
-            valor_campo = ""
-            try:
-                valor_campo = campo_cidade.get_attribute("value") or ""
-                adicionar_log(f"Valor do campo: '{valor_campo}'", "info")
+                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
+                opcao_cidade.click()
+                adicionar_log(f"Clicou em '{cidade}' (metodo 2)", "sucesso")
             except:
-                pass
-
-            # Verifica se o placeholder mudou (indica selecao)
-            placeholder_atual = ""
-            try:
-                placeholder_atual = campo_cidade.get_attribute("placeholder") or ""
-                adicionar_log(f"Placeholder atual: '{placeholder_atual}'", "info")
-            except:
-                pass
-
-            # A cidade esta selecionada se:
-            # 1. O valor do campo contem " - " (ex: "Uberaba - MG")
-            # 2. Ou o placeholder contem " - " e a cidade
-            if (" - " in valor_campo and cidade.lower() in valor_campo.lower()) or \
-               (" - " in placeholder_atual and cidade.lower() in placeholder_atual.lower()):
-                adicionar_log(f"CONFIRMADO: Cidade '{cidade}' selecionada com sucesso!", "sucesso")
-                cidade_selecionada = True
-                break
-            else:
-                adicionar_log(f"Cidade NAO foi selecionada. Tentando novamente...", "aviso")
-                # Limpa e digita novamente para a proxima tentativa
                 try:
-                    campo_cidade.clear()
-                    time.sleep(0.3)
-                    campo_cidade.send_keys(cidade)
-                    time.sleep(2)
-                except:
-                    pass
-
-        if not cidade_selecionada:
-            adicionar_log(f"ERRO: Nao foi possivel selecionar a cidade '{cidade}' apos {max_tentativas} tentativas!", "erro")
-            capturar_screenshot(driver, f"erro_selecao_{cidade}")
-            raise Exception(f"Cidade '{cidade}' nao foi selecionada corretamente")
+                    opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}')]")
+                    driver.execute_script("arguments[0].click();", opcao_cidade)
+                    adicionar_log(f"Clicou em '{cidade}' (metodo 3)", "sucesso")
+                except Exception as e:
+                    adicionar_log(f"Erro ao clicar na cidade: {e}", "erro")
+                    capturar_screenshot(driver, f"erro_dropdown_{cidade}")
+                    raise Exception(f"Cidade '{cidade}' nao encontrada no dropdown")
 
         time.sleep(1)
+
+        # VERIFICACAO: Checa se a cidade foi realmente selecionada
+        adicionar_log("Verificando se cidade foi selecionada...", "info")
+        valor_campo = campo_cidade.get_attribute("value") or ""
+        placeholder_atual = campo_cidade.get_attribute("placeholder") or ""
+        adicionar_log(f"Valor do campo: '{valor_campo}'", "info")
+        adicionar_log(f"Placeholder: '{placeholder_atual}'", "info")
+
+        # Verifica se contem " - " (indica selecao correta)
+        if " - " in valor_campo or " - " in placeholder_atual:
+            adicionar_log(f"CONFIRMADO: Cidade selecionada!", "sucesso")
+        else:
+            adicionar_log(f"AVISO: Cidade pode nao ter sido selecionada corretamente", "aviso")
+            capturar_screenshot(driver, f"verificacao_{cidade}")
 
         # ETAPA 7: Tipo de empresa
         print("[*] Selecionando tipo de empresa...")
