@@ -442,49 +442,73 @@ def cotar_cidade(cidade):
         for tentativa in range(max_tentativas):
             adicionar_log(f"Tentativa {tentativa + 1} de selecionar cidade...", "info")
 
-            # Tenta varios metodos para encontrar e clicar na cidade
-            metodos_clique = [
-                # Metodo 1: XPath com texto exato "Cidade - UF"
-                (By.XPATH, f"//*[contains(text(), '{cidade} - ')]"),
-                # Metodo 2: XPath com cidade e hifen
-                (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]"),
-                # Metodo 3: Div com o texto
-                (By.XPATH, f"//div[contains(text(), '{cidade}')]"),
-                # Metodo 4: Qualquer elemento com a cidade
-                (By.XPATH, f"//*[contains(text(), '{cidade}')]"),
+            # METODO 1: Usar teclas do teclado (mais confiavel para autocomplete)
+            try:
+                from selenium.webdriver.common.keys import Keys
+                adicionar_log("Tentando selecionar via teclas (seta baixo + Enter)...", "info")
+
+                # Foca no campo
+                campo_cidade.click()
+                time.sleep(0.5)
+
+                # Pressiona seta para baixo para selecionar primeira opcao
+                campo_cidade.send_keys(Keys.ARROW_DOWN)
+                time.sleep(0.5)
+
+                # Pressiona Enter para confirmar
+                campo_cidade.send_keys(Keys.ENTER)
+                time.sleep(1)
+
+                adicionar_log("Teclas enviadas (DOWN + ENTER)", "info")
+            except Exception as e:
+                adicionar_log(f"Erro ao usar teclas: {e}", "aviso")
+
+            # Se nao funcionou, tenta clicar no elemento do dropdown
+            time.sleep(1)
+
+            # Verifica se funcionou antes de tentar clique
+            valor_campo = campo_cidade.get_attribute("value") or ""
+            if " - " in valor_campo:
+                adicionar_log(f"Cidade selecionada via teclado: {valor_campo}", "sucesso")
+                cidade_selecionada = True
+                break
+
+            # METODO 2: Tenta clicar nos elementos do dropdown
+            adicionar_log("Tentando clicar no dropdown...", "info")
+
+            # Procura por elementos que parecem ser itens de dropdown
+            seletores_dropdown = [
+                f"//div[contains(@class, 'dropdown')]//div[contains(text(), '{cidade}')]",
+                f"//ul//li[contains(text(), '{cidade}')]",
+                f"//div[contains(@class, 'option')][contains(text(), '{cidade}')]",
+                f"//div[contains(@class, 'item')][contains(text(), '{cidade}')]",
+                f"//div[contains(@class, 'suggestion')][contains(text(), '{cidade}')]",
+                f"//div[contains(@class, 'result')][contains(text(), '{cidade}')]",
+                f"//span[contains(text(), '{cidade} -')]",
+                f"//div[contains(text(), '{cidade} -')]",
+                f"//*[contains(text(), '{cidade} - ')]",
             ]
 
-            for i, (by, xpath) in enumerate(metodos_clique):
+            for seletor in seletores_dropdown:
                 try:
-                    # Aguarda o elemento aparecer
-                    opcao_cidade = WebDriverWait(driver, 3).until(
-                        EC.presence_of_element_located((by, xpath))
-                    )
-
-                    # Tenta diferentes formas de clicar
-                    try:
-                        # Primeiro tenta scroll ate o elemento
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", opcao_cidade)
-                        time.sleep(0.3)
-
-                        # Tenta clicar com JavaScript
-                        driver.execute_script("arguments[0].click();", opcao_cidade)
-                        adicionar_log(f"Clique via JavaScript no metodo {i+1}", "info")
-                    except:
+                    elementos = driver.find_elements(By.XPATH, seletor)
+                    for elem in elementos:
                         try:
-                            # Tenta clicar com Actions
-                            from selenium.webdriver.common.action_chains import ActionChains
-                            actions = ActionChains(driver)
-                            actions.move_to_element(opcao_cidade).click().perform()
-                            adicionar_log(f"Clique via Actions no metodo {i+1}", "info")
-                        except:
-                            # Tenta clique direto
-                            opcao_cidade.click()
-                            adicionar_log(f"Clique direto no metodo {i+1}", "info")
+                            if elem.is_displayed() and elem != campo_cidade:
+                                texto_elem = elem.text
+                                adicionar_log(f"Encontrado elemento: '{texto_elem}'", "info")
 
-                    time.sleep(1)
-                    break
-                except Exception as e:
+                                # Verifica se e um item de dropdown (contem cidade + UF)
+                                if cidade.lower() in texto_elem.lower():
+                                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+                                    time.sleep(0.3)
+                                    driver.execute_script("arguments[0].click();", elem)
+                                    adicionar_log(f"Clicou no elemento: '{texto_elem}'", "info")
+                                    time.sleep(1)
+                                    break
+                        except:
+                            continue
+                except:
                     continue
 
             # VERIFICACAO: Checa se a cidade foi realmente selecionada
@@ -494,7 +518,6 @@ def cotar_cidade(cidade):
             # Verifica o valor do campo
             valor_campo = ""
             try:
-                # Tenta pegar o valor do campo de cidade
                 valor_campo = campo_cidade.get_attribute("value") or ""
                 adicionar_log(f"Valor do campo: '{valor_campo}'", "info")
             except:
@@ -518,12 +541,10 @@ def cotar_cidade(cidade):
                 break
             else:
                 adicionar_log(f"Cidade NAO foi selecionada. Tentando novamente...", "aviso")
-                # Limpa e digita novamente
+                # Limpa e digita novamente para a proxima tentativa
                 try:
-                    driver.execute_script("arguments[0].click();", campo_cidade)
+                    campo_cidade.clear()
                     time.sleep(0.3)
-                    driver.execute_script("arguments[0].select();", campo_cidade)
-                    time.sleep(0.2)
                     campo_cidade.send_keys(cidade)
                     time.sleep(2)
                 except:
