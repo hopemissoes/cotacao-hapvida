@@ -1006,7 +1006,7 @@ def cotar_proxima_cidade(cidade):
 
 
 def extrair_valores(driver):
-    """Extrai os valores da tabela de precos."""
+    """Extrai os valores da tabela de precos - apenas coluna 'De:'."""
     faixas = [
         "0 a 18 anos",
         "19 a 23 anos",
@@ -1027,39 +1027,60 @@ def extrair_valores(driver):
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(1)
 
-        # Metodo 1: Busca pela coluna "Por:" que contem os valores
-        # Os valores aparecem apos o texto "Por:" na interface
-        elementos = driver.find_elements(By.XPATH, "//*[contains(text(), 'Por:')]/following-sibling::*")
+        adicionar_log("Extraindo valores da tabela...", "info")
 
-        valores_encontrados = []
+        # Estrategia 1: Busca especificamente pela coluna "De:"
+        # Procura elementos que estao na mesma linha/coluna que o header "De:"
+        valores_de = []
 
-        # Metodo 2: Busca todos elementos que contem valores no formato ###,##
-        todos_elementos = driver.find_elements(By.XPATH, "//*")
-        for elem in todos_elementos:
-            try:
-                texto = elem.text.strip()
-                # Verifica se e um valor monetario (formato ###,## sem texto adicional)
-                if texto and ',' in texto:
-                    # Remove pontos de milhar e verifica se e numero
-                    texto_limpo = texto.replace('.', '').replace(',', '.').replace('R$', '').replace(' ', '')
-                    try:
-                        valor_num = float(texto_limpo)
-                        # Valores de plano geralmente estao entre 50 e 2000
-                        if 50 < valor_num < 2000:
-                            valores_encontrados.append(texto)
-                    except:
-                        pass
-            except:
-                pass
+        try:
+            # Tenta encontrar a tabela e pegar valores da coluna "De:"
+            # Busca por elementos que contenham valores monetarios
+            todos_elementos = driver.find_elements(By.XPATH, "//*")
 
-        # Remove duplicatas mantendo a ordem
-        valores_unicos = []
-        for v in valores_encontrados:
-            if v not in valores_unicos:
-                valores_unicos.append(v)
+            valores_encontrados = []
+            for elem in todos_elementos:
+                try:
+                    texto = elem.text.strip()
+                    # Verifica se e um valor monetario (formato ###,##)
+                    if texto and ',' in texto and len(texto) < 15:
+                        # Remove pontos de milhar e verifica se e numero
+                        texto_limpo = texto.replace('.', '').replace(',', '.').replace('R$', '').replace(' ', '')
+                        try:
+                            valor_num = float(texto_limpo)
+                            # Valores de plano geralmente estao entre 50 e 2000
+                            if 50 < valor_num < 2000:
+                                valores_encontrados.append(texto)
+                        except:
+                            pass
+                except:
+                    pass
 
-        # Pega os primeiros 10 valores (as 10 faixas etarias)
-        for i, valor in enumerate(valores_unicos[:10]):
+            # Remove duplicatas mantendo a ordem
+            valores_unicos = []
+            for v in valores_encontrados:
+                if v not in valores_unicos:
+                    valores_unicos.append(v)
+
+            adicionar_log(f"Valores encontrados: {len(valores_unicos)}", "info")
+
+            # Se temos exatamente 20 valores (10 de cada coluna), pega apenas os pares (coluna "De:")
+            # Os valores aparecem na ordem: De1, Por1, De2, Por2, ...
+            # Entao pegamos indices 0, 2, 4, 6, 8, 10, 12, 14, 16, 18
+            if len(valores_unicos) >= 20:
+                adicionar_log("Detectadas duas colunas (De/Por) - pegando apenas coluna 'De:'", "info")
+                valores_de = [valores_unicos[i] for i in range(0, 20, 2)]
+            elif len(valores_unicos) >= 10:
+                # Se temos apenas 10 valores, usa todos
+                valores_de = valores_unicos[:10]
+            else:
+                valores_de = valores_unicos
+
+        except Exception as e:
+            adicionar_log(f"Erro na estrategia 1: {e}", "aviso")
+
+        # Monta o resultado final
+        for i, valor in enumerate(valores_de[:10]):
             if i < len(faixas):
                 valor_formatado = valor if valor.startswith("R$") else f"R$ {valor}"
                 valores.append({
@@ -1067,10 +1088,10 @@ def extrair_valores(driver):
                     "valor": valor_formatado
                 })
 
-        print(f"[*] Encontrados {len(valores)} valores de faixas etarias")
+        adicionar_log(f"Extraidos {len(valores)} valores de faixas etarias", "sucesso")
 
     except Exception as e:
-        print(f"[ERRO] Erro ao extrair valores: {str(e)}")
+        adicionar_log(f"Erro ao extrair valores: {str(e)}", "erro")
 
     return valores
 
