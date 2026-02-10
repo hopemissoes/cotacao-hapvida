@@ -1,15 +1,15 @@
 # Dockerfile para Cotacao Hapvida
 FROM python:3.11-slim
 
-# Instala dependencias do sistema para Chrome/Selenium
+# Instala Chromium e ChromeDriver do repositorio (mais estavel no Docker)
 RUN apt-get update && apt-get install -y \
+    chromium \
+    chromium-driver \
     wget \
     gnupg \
     unzip \
     curl \
     xvfb \
-    libxi6 \
-    libgconf-2-4 \
     libnss3 \
     libxss1 \
     libasound2 \
@@ -17,15 +17,18 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libdrm2 \
     libgbm1 \
+    libxkbcommon0 \
     fonts-liberation \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Instala o Google Chrome
-RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && rm -rf /var/lib/apt/lists/*
+# Verifica instalacao do Chromium e ChromeDriver
+RUN echo "=== Verificando instalacao ===" && \
+    which chromium && \
+    chromium --version && \
+    which chromedriver && \
+    chromedriver --version && \
+    echo "=== Instalacao OK ==="
 
 # Define diretorio de trabalho
 WORKDIR /app
@@ -44,6 +47,8 @@ EXPOSE 5000
 # Variaveis de ambiente
 ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 
 # Comando para iniciar a aplicacao
 CMD ["python", "app_cotacao.py"]

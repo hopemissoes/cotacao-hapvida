@@ -133,21 +133,62 @@ def clicar_elemento_seguro(driver, elemento, tentativas=3):
 
 
 def iniciar_navegador():
-    """Inicia o navegador Chrome."""
+    """Inicia o navegador Chrome/Chromium."""
     global driver_global
+    import os
 
     print("[*] Iniciando navegador...")
 
     chrome_options = Options()
+    # Opcoes basicas
     chrome_options.add_argument("--start-maximized")
     chrome_options.add_argument("--disable-notifications")
     chrome_options.add_argument("--disable-popup-blocking")
-    chrome_options.add_argument("--headless")  # Roda sem janela (necessario para VPS)
+    chrome_options.add_argument("--window-size=1920,1080")
+
+    # Opcoes para rodar em container/VPS
+    chrome_options.add_argument("--headless=new")  # Novo modo headless
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-setuid-sandbox")
+    chrome_options.add_argument("--single-process")
+    chrome_options.add_argument("--no-zygote")
+    chrome_options.add_argument("--no-first-run")
+    chrome_options.add_argument("--disable-background-networking")
+    chrome_options.add_argument("--disable-default-apps")
+    chrome_options.add_argument("--remote-debugging-port=9222")
 
+    # Se estiver usando Chromium (Docker), configura o binario
+    chromium_bin = os.environ.get("CHROME_BIN", "/usr/bin/chromium")
+    if os.path.exists(chromium_bin):
+        chrome_options.binary_location = chromium_bin
+        print(f"[*] Usando Chromium: {chromium_bin}")
+
+    # Lista de caminhos para o ChromeDriver
+    chromedriver_paths = [
+        os.environ.get("CHROMEDRIVER_PATH", ""),
+        "/usr/bin/chromedriver",
+        "/usr/local/bin/chromedriver",
+    ]
+
+    # Tenta usar o ChromeDriver do sistema primeiro
+    for path in chromedriver_paths:
+        if path and os.path.exists(path):
+            try:
+                print(f"[*] Tentando ChromeDriver: {path}")
+                service = Service(path)
+                driver_global = webdriver.Chrome(service=service, options=chrome_options)
+                print(f"[OK] Usando ChromeDriver do sistema: {path}")
+                return driver_global
+            except Exception as e:
+                print(f"[AVISO] Falhou com {path}: {e}")
+                continue
+
+    # Fallback: usa webdriver-manager
+    print("[*] Usando webdriver-manager como fallback...")
     service = Service(ChromeDriverManager().install())
     driver_global = webdriver.Chrome(service=service, options=chrome_options)
 
@@ -904,37 +945,51 @@ def cotar():
     """Rota para executar cotacao."""
     global primeira_cotacao, driver_global
 
-    dados = request.get_json()
-    cidades = dados.get('cidades', [])
+    try:
+        dados = request.get_json()
+        cidades = dados.get('cidades', [])
 
-    if not cidades:
-        return jsonify({"erro": "Nenhuma cidade informada"}), 400
+        if not cidades:
+            return jsonify({"erro": "Nenhuma cidade informada"}), 400
 
-    resultados = []
+        resultados = []
 
-    for i, cidade in enumerate(cidades):
-        cidade = cidade.strip()
-        if cidade:
-            print(f"\n{'='*50}")
-            print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
-            print(f"{'='*50}")
+        for i, cidade in enumerate(cidades):
+            cidade = cidade.strip()
+            if cidade:
+                print(f"\n{'='*50}")
+                print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
+                print(f"{'='*50}")
 
-            if i == 0 or primeira_cotacao or driver_global is None:
-                # Primeira cidade: faz o fluxo completo
-                resultado = cotar_cidade(cidade)
-                primeira_cotacao = False
-            else:
-                # Demais cidades: volta para tela de cidade e cota
-                voltar_para_cidade(driver_global)
-                resultado = cotar_proxima_cidade(cidade)
+                try:
+                    if i == 0 or primeira_cotacao or driver_global is None:
+                        # Primeira cidade: faz o fluxo completo
+                        resultado = cotar_cidade(cidade)
+                        primeira_cotacao = False
+                    else:
+                        # Demais cidades: volta para tela de cidade e cota
+                        voltar_para_cidade(driver_global)
+                        resultado = cotar_proxima_cidade(cidade)
+                except Exception as e:
+                    print(f"[ERRO] Excecao ao cotar {cidade}: {str(e)}")
+                    resultado = {
+                        "cidade": cidade,
+                        "sucesso": False,
+                        "erro": str(e)
+                    }
+                    primeira_cotacao = True
 
-            resultados.append(resultado)
+                resultados.append(resultado)
 
-            # Se deu erro, tenta o fluxo completo na proxima
-            if not resultado.get("sucesso"):
-                primeira_cotacao = True
+                # Se deu erro, tenta o fluxo completo na proxima
+                if not resultado.get("sucesso"):
+                    primeira_cotacao = True
 
-    return jsonify(resultados)
+        return jsonify(resultados)
+
+    except Exception as e:
+        print(f"[ERRO] Excecao geral na rota /cotar: {str(e)}")
+        return jsonify([{"cidade": "N/A", "sucesso": False, "erro": f"Erro geral: {str(e)}"}]), 500
 
 
 @app.route('/status')
