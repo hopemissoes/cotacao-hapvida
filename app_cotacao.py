@@ -11,7 +11,7 @@ Data: 03/02/2025
 =============================================================================
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -24,6 +24,8 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 import json
 import threading
+import base64
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -38,6 +40,43 @@ URL_LOGIN = "https://app.cotadorsimplificado.com.br/login"
 driver_global = None
 logado = False
 primeira_cotacao = True  # Controla se e a primeira cotacao da sessao
+
+# ============================================
+# SISTEMA DE LOGS EM TEMPO REAL
+# ============================================
+logs_execucao = []
+logs_lock = threading.Lock()
+
+def adicionar_log(mensagem, tipo="info"):
+    """Adiciona um log que sera exibido no frontend."""
+    global logs_execucao
+    with logs_lock:
+        log_entry = {
+            "timestamp": datetime.now().strftime("%H:%M:%S"),
+            "tipo": tipo,  # info, sucesso, erro, aviso
+            "mensagem": mensagem
+        }
+        logs_execucao.append(log_entry)
+        # Mantem apenas os ultimos 100 logs
+        if len(logs_execucao) > 100:
+            logs_execucao = logs_execucao[-100:]
+    print(f"[{tipo.upper()}] {mensagem}")
+
+def limpar_logs():
+    """Limpa todos os logs."""
+    global logs_execucao
+    with logs_lock:
+        logs_execucao = []
+
+def capturar_screenshot(driver, nome="erro"):
+    """Captura screenshot e retorna em base64."""
+    try:
+        screenshot = driver.get_screenshot_as_base64()
+        adicionar_log(f"Screenshot capturado: {nome}", "info")
+        return screenshot
+    except Exception as e:
+        adicionar_log(f"Erro ao capturar screenshot: {e}", "erro")
+        return None
 
 # ============================================
 # FUNCOES DE AUTOMACAO
@@ -264,50 +303,69 @@ def fazer_login():
         return False
 
 
+def aguardar_elemento(driver, by, valor, timeout=20, clicavel=False):
+    """Aguarda um elemento carregar com timeout maior e logs."""
+    try:
+        wait = WebDriverWait(driver, timeout)
+        if clicavel:
+            elemento = wait.until(EC.element_to_be_clickable((by, valor)))
+        else:
+            elemento = wait.until(EC.presence_of_element_located((by, valor)))
+        return elemento
+    except Exception as e:
+        adicionar_log(f"Timeout aguardando elemento: {valor}", "aviso")
+        return None
+
+
 def cotar_cidade(cidade):
     """Executa a cotacao para uma cidade especifica."""
     global driver_global, logado
 
+    adicionar_log(f"Iniciando cotacao para {cidade}...", "info")
+
     if not logado or driver_global is None:
+        adicionar_log("Fazendo login...", "info")
         if not fazer_login():
+            adicionar_log("Falha no login", "erro")
             return {"erro": "Falha no login"}
 
     driver = driver_global
-    wait = WebDriverWait(driver, 15)
+    wait = WebDriverWait(driver, 20)  # Aumentado timeout
 
     try:
         # Vai para pagina inicial
+        adicionar_log("Acessando pagina inicial...", "info")
         driver.get("https://app.cotadorsimplificado.com.br/")
-        time.sleep(2)
+        time.sleep(3)  # Aumentado
 
         # Fecha qualquer popup que apareca
-        print("[*] Verificando popups...")
+        adicionar_log("Verificando popups...", "info")
         fechar_popups(driver)
         time.sleep(1)
 
         # ETAPA 2: Cotar Hapvida
-        print(f"[*] Iniciando cotacao para {cidade}...")
-        fechar_popups(driver)  # Fecha popups antes de clicar
-        botao_hapvida = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]"))
-        )
+        adicionar_log("Clicando em 'Cotar Hapvida'...", "info")
+        fechar_popups(driver)
+        botao_hapvida = aguardar_elemento(driver, By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]", timeout=20, clicavel=True)
+        if not botao_hapvida:
+            raise Exception("Botao 'Cotar Hapvida' nao encontrado")
         clicar_elemento_seguro(driver, botao_hapvida)
-        time.sleep(2)
+        time.sleep(3)  # Aumentado
 
         # ETAPA 3: PME ate 29 vidas
-        print("[*] Selecionando PME ate 29 vidas...")
-        fechar_popups(driver)  # Fecha popups antes de clicar
-        opcao_pme = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PME até 29 vidas')]"))
-        )
+        adicionar_log("Selecionando 'PME ate 29 vidas'...", "info")
+        fechar_popups(driver)
+        opcao_pme = aguardar_elemento(driver, By.XPATH, "//*[contains(text(), 'PME até 29 vidas')]", timeout=20, clicavel=True)
+        if not opcao_pme:
+            raise Exception("Opcao 'PME ate 29 vidas' nao encontrada")
         clicar_elemento_seguro(driver, opcao_pme)
-        time.sleep(2)
+        time.sleep(3)  # Aumentado
 
         # ETAPA 4: Nome do cliente
-        print("[*] Preenchendo nome do cliente...")
-        campo_nome = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='cliente']"))
-        )
+        adicionar_log("Preenchendo nome do cliente...", "info")
+        campo_nome = aguardar_elemento(driver, By.CSS_SELECTOR, "input[placeholder*='cliente']", timeout=20)
+        if not campo_nome:
+            raise Exception("Campo de nome do cliente nao encontrado")
         campo_nome.clear()
         campo_nome.send_keys("teste")
         time.sleep(1)
@@ -319,33 +377,30 @@ def cotar_cidade(cidade):
             pass
 
         # ETAPA 5: Avancar
-        print("[*] Avancando...")
+        adicionar_log("Clicando em Avancar...", "info")
         clicar_avancar(driver)
-        time.sleep(2)
+        time.sleep(3)  # Aumentado
 
         # ETAPA 6: Selecionar cidade
-        print(f"[*] Selecionando cidade: {cidade}...")
+        adicionar_log(f"Selecionando cidade: {cidade}...", "info")
 
-        # Aguarda um pouco mais para a pagina carregar
-        time.sleep(1)
+        # Aguarda a pagina carregar completamente
+        time.sleep(3)  # Aumentado significativamente
 
         # O campo de cidade tem um placeholder que pode conter o nome da cidade anterior
-        # Ex: "Fortaleza - CE", "Recife - PE", etc.
-        # Procuramos por input que esta proximo ao texto "DIGITE o nome da CIDADE"
         campo_cidade = None
 
         # Metodo 1: Busca pelo texto indicativo proximo
+        adicionar_log("Buscando campo de cidade...", "info")
         try:
-            # Procura todos os inputs de texto
             inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])")
             for inp in inputs:
                 try:
                     if inp.is_displayed() and inp.is_enabled():
                         placeholder = inp.get_attribute("placeholder") or ""
-                        # O placeholder contem " - " que indica cidade/estado
                         if " - " in placeholder or "cidade" in placeholder.lower():
                             campo_cidade = inp
-                            print(f"[*] Campo cidade encontrado com placeholder: {placeholder}")
+                            adicionar_log(f"Campo cidade encontrado: {placeholder}", "sucesso")
                             break
                 except:
                     continue
@@ -356,38 +411,61 @@ def cotar_cidade(cidade):
         if not campo_cidade:
             try:
                 campo_cidade = driver.find_element(By.XPATH, "//div[contains(text(), 'CIDADE')]/ancestor::div[1]//input")
+                adicionar_log("Campo cidade encontrado via XPATH", "sucesso")
             except:
                 pass
 
         if campo_cidade:
-            # Usa JavaScript para selecionar todo o texto e substituir
             driver.execute_script("arguments[0].scrollIntoView(true);", campo_cidade)
             time.sleep(0.5)
             driver.execute_script("arguments[0].click();", campo_cidade)
+            time.sleep(0.5)
+            # Limpa o campo completamente
+            driver.execute_script("arguments[0].value = '';", campo_cidade)
             time.sleep(0.3)
-            # Seleciona todo o texto existente
-            driver.execute_script("arguments[0].select();", campo_cidade)
-            time.sleep(0.2)
-            # Digita a nova cidade (substitui o texto selecionado)
+            # Digita a nova cidade
+            adicionar_log(f"Digitando cidade: {cidade}", "info")
             campo_cidade.send_keys(cidade)
         else:
+            adicionar_log("Campo de cidade NAO encontrado!", "erro")
+            capturar_screenshot(driver, f"erro_campo_cidade_{cidade}")
             raise Exception("Campo de cidade nao encontrado")
 
-        time.sleep(2)
+        # Aguarda o dropdown carregar
+        adicionar_log("Aguardando dropdown de cidades...", "info")
+        time.sleep(3)  # Aumentado significativamente
 
         # Clica na opcao do dropdown
-        try:
-            opcao_cidade = wait.until(
-                EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
-            )
-            opcao_cidade.click()
-        except:
+        adicionar_log(f"Buscando opcao '{cidade}' no dropdown...", "info")
+        opcao_encontrada = False
+
+        # Tenta varios metodos para encontrar a cidade
+        metodos = [
+            (By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"),
+            (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]"),
+            (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), 'MG')]"),
+            (By.XPATH, f"//div[contains(text(), '{cidade}')]"),
+            (By.XPATH, f"//*[contains(text(), '{cidade}')]"),
+        ]
+
+        for i, (by, xpath) in enumerate(metodos):
             try:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
-                opcao_cidade.click()
-            except:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}')]")
+                adicionar_log(f"Tentativa {i+1}: {xpath[:50]}...", "info")
+                opcao_cidade = WebDriverWait(driver, 5).until(
+                    EC.element_to_be_clickable((by, xpath))
+                )
                 driver.execute_script("arguments[0].click();", opcao_cidade)
+                adicionar_log(f"Cidade selecionada com sucesso!", "sucesso")
+                opcao_encontrada = True
+                break
+            except Exception as e:
+                adicionar_log(f"Metodo {i+1} falhou", "aviso")
+                continue
+
+        if not opcao_encontrada:
+            adicionar_log(f"Cidade '{cidade}' NAO encontrada no dropdown!", "erro")
+            capturar_screenshot(driver, f"erro_dropdown_{cidade}")
+            raise Exception(f"Cidade '{cidade}' nao encontrada no dropdown")
         time.sleep(1)
 
         # ETAPA 7: Tipo de empresa
@@ -946,20 +1024,25 @@ def cotar():
     global primeira_cotacao, driver_global
 
     try:
+        # Limpa logs anteriores
+        limpar_logs()
+        adicionar_log("Iniciando processo de cotacao...", "info")
+
         dados = request.get_json()
         cidades = dados.get('cidades', [])
 
         if not cidades:
+            adicionar_log("Nenhuma cidade informada", "erro")
             return jsonify({"erro": "Nenhuma cidade informada"}), 400
 
+        adicionar_log(f"Cidades para cotar: {', '.join(cidades)}", "info")
         resultados = []
 
         for i, cidade in enumerate(cidades):
             cidade = cidade.strip()
             if cidade:
-                print(f"\n{'='*50}")
-                print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
-                print(f"{'='*50}")
+                adicionar_log(f"=" * 40, "info")
+                adicionar_log(f"Cotando cidade {i+1}/{len(cidades)}: {cidade}", "info")
 
                 try:
                     if i == 0 or primeira_cotacao or driver_global is None:
@@ -968,14 +1051,20 @@ def cotar():
                         primeira_cotacao = False
                     else:
                         # Demais cidades: volta para tela de cidade e cota
+                        adicionar_log("Voltando para tela de cidade...", "info")
                         voltar_para_cidade(driver_global)
                         resultado = cotar_proxima_cidade(cidade)
                 except Exception as e:
-                    print(f"[ERRO] Excecao ao cotar {cidade}: {str(e)}")
+                    adicionar_log(f"EXCECAO ao cotar {cidade}: {str(e)}", "erro")
+                    # Captura screenshot do erro
+                    screenshot = None
+                    if driver_global:
+                        screenshot = capturar_screenshot(driver_global, f"erro_{cidade}")
                     resultado = {
                         "cidade": cidade,
                         "sucesso": False,
-                        "erro": str(e)
+                        "erro": str(e),
+                        "screenshot": screenshot
                     }
                     primeira_cotacao = True
 
@@ -983,12 +1072,16 @@ def cotar():
 
                 # Se deu erro, tenta o fluxo completo na proxima
                 if not resultado.get("sucesso"):
+                    adicionar_log(f"Falha na cotacao de {cidade}", "erro")
                     primeira_cotacao = True
+                else:
+                    adicionar_log(f"Cotacao de {cidade} concluida com sucesso!", "sucesso")
 
+        adicionar_log("Processo de cotacao finalizado", "sucesso")
         return jsonify(resultados)
 
     except Exception as e:
-        print(f"[ERRO] Excecao geral na rota /cotar: {str(e)}")
+        adicionar_log(f"ERRO GERAL: {str(e)}", "erro")
         return jsonify([{"cidade": "N/A", "sucesso": False, "erro": f"Erro geral: {str(e)}"}]), 500
 
 
@@ -1000,6 +1093,34 @@ def status():
         "navegador_ativo": driver_global is not None,
         "logado": logado
     })
+
+
+@app.route('/logs')
+def get_logs():
+    """Retorna os logs de execucao."""
+    global logs_execucao
+    with logs_lock:
+        return jsonify(logs_execucao)
+
+
+@app.route('/logs/limpar', methods=['POST'])
+def limpar_logs_route():
+    """Limpa os logs de execucao."""
+    limpar_logs()
+    return jsonify({"sucesso": True})
+
+
+@app.route('/screenshot')
+def get_screenshot():
+    """Retorna screenshot atual do navegador."""
+    global driver_global
+    if driver_global:
+        try:
+            screenshot = driver_global.get_screenshot_as_base64()
+            return jsonify({"screenshot": screenshot})
+        except Exception as e:
+            return jsonify({"erro": str(e)}), 500
+    return jsonify({"erro": "Navegador nao iniciado"}), 400
 
 
 @app.route('/login', methods=['POST'])
