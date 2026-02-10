@@ -433,39 +433,107 @@ def cotar_cidade(cidade):
 
         # Aguarda o dropdown carregar
         adicionar_log("Aguardando dropdown de cidades...", "info")
-        time.sleep(3)  # Aumentado significativamente
+        time.sleep(3)
 
-        # Clica na opcao do dropdown
-        adicionar_log(f"Buscando opcao '{cidade}' no dropdown...", "info")
-        opcao_encontrada = False
+        # Tenta selecionar a cidade do dropdown
+        cidade_selecionada = False
+        max_tentativas = 3
 
-        # Tenta varios metodos para encontrar a cidade
-        metodos = [
-            (By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"),
-            (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]"),
-            (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), 'MG')]"),
-            (By.XPATH, f"//div[contains(text(), '{cidade}')]"),
-            (By.XPATH, f"//*[contains(text(), '{cidade}')]"),
-        ]
+        for tentativa in range(max_tentativas):
+            adicionar_log(f"Tentativa {tentativa + 1} de selecionar cidade...", "info")
 
-        for i, (by, xpath) in enumerate(metodos):
+            # Tenta varios metodos para encontrar e clicar na cidade
+            metodos_clique = [
+                # Metodo 1: XPath com texto exato "Cidade - UF"
+                (By.XPATH, f"//*[contains(text(), '{cidade} - ')]"),
+                # Metodo 2: XPath com cidade e hifen
+                (By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]"),
+                # Metodo 3: Div com o texto
+                (By.XPATH, f"//div[contains(text(), '{cidade}')]"),
+                # Metodo 4: Qualquer elemento com a cidade
+                (By.XPATH, f"//*[contains(text(), '{cidade}')]"),
+            ]
+
+            for i, (by, xpath) in enumerate(metodos_clique):
+                try:
+                    # Aguarda o elemento aparecer
+                    opcao_cidade = WebDriverWait(driver, 3).until(
+                        EC.presence_of_element_located((by, xpath))
+                    )
+
+                    # Tenta diferentes formas de clicar
+                    try:
+                        # Primeiro tenta scroll ate o elemento
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", opcao_cidade)
+                        time.sleep(0.3)
+
+                        # Tenta clicar com JavaScript
+                        driver.execute_script("arguments[0].click();", opcao_cidade)
+                        adicionar_log(f"Clique via JavaScript no metodo {i+1}", "info")
+                    except:
+                        try:
+                            # Tenta clicar com Actions
+                            from selenium.webdriver.common.action_chains import ActionChains
+                            actions = ActionChains(driver)
+                            actions.move_to_element(opcao_cidade).click().perform()
+                            adicionar_log(f"Clique via Actions no metodo {i+1}", "info")
+                        except:
+                            # Tenta clique direto
+                            opcao_cidade.click()
+                            adicionar_log(f"Clique direto no metodo {i+1}", "info")
+
+                    time.sleep(1)
+                    break
+                except Exception as e:
+                    continue
+
+            # VERIFICACAO: Checa se a cidade foi realmente selecionada
+            time.sleep(1)
+            adicionar_log("Verificando se cidade foi selecionada...", "info")
+
+            # Verifica o valor do campo
+            valor_campo = ""
             try:
-                adicionar_log(f"Tentativa {i+1}: {xpath[:50]}...", "info")
-                opcao_cidade = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((by, xpath))
-                )
-                driver.execute_script("arguments[0].click();", opcao_cidade)
-                adicionar_log(f"Cidade selecionada com sucesso!", "sucesso")
-                opcao_encontrada = True
-                break
-            except Exception as e:
-                adicionar_log(f"Metodo {i+1} falhou", "aviso")
-                continue
+                # Tenta pegar o valor do campo de cidade
+                valor_campo = campo_cidade.get_attribute("value") or ""
+                adicionar_log(f"Valor do campo: '{valor_campo}'", "info")
+            except:
+                pass
 
-        if not opcao_encontrada:
-            adicionar_log(f"Cidade '{cidade}' NAO encontrada no dropdown!", "erro")
-            capturar_screenshot(driver, f"erro_dropdown_{cidade}")
-            raise Exception(f"Cidade '{cidade}' nao encontrada no dropdown")
+            # Verifica se o placeholder mudou (indica selecao)
+            placeholder_atual = ""
+            try:
+                placeholder_atual = campo_cidade.get_attribute("placeholder") or ""
+                adicionar_log(f"Placeholder atual: '{placeholder_atual}'", "info")
+            except:
+                pass
+
+            # A cidade esta selecionada se:
+            # 1. O valor do campo contem " - " (ex: "Uberaba - MG")
+            # 2. Ou o placeholder contem " - " e a cidade
+            if (" - " in valor_campo and cidade.lower() in valor_campo.lower()) or \
+               (" - " in placeholder_atual and cidade.lower() in placeholder_atual.lower()):
+                adicionar_log(f"CONFIRMADO: Cidade '{cidade}' selecionada com sucesso!", "sucesso")
+                cidade_selecionada = True
+                break
+            else:
+                adicionar_log(f"Cidade NAO foi selecionada. Tentando novamente...", "aviso")
+                # Limpa e digita novamente
+                try:
+                    driver.execute_script("arguments[0].click();", campo_cidade)
+                    time.sleep(0.3)
+                    driver.execute_script("arguments[0].select();", campo_cidade)
+                    time.sleep(0.2)
+                    campo_cidade.send_keys(cidade)
+                    time.sleep(2)
+                except:
+                    pass
+
+        if not cidade_selecionada:
+            adicionar_log(f"ERRO: Nao foi possivel selecionar a cidade '{cidade}' apos {max_tentativas} tentativas!", "erro")
+            capturar_screenshot(driver, f"erro_selecao_{cidade}")
+            raise Exception(f"Cidade '{cidade}' nao foi selecionada corretamente")
+
         time.sleep(1)
 
         # ETAPA 7: Tipo de empresa
