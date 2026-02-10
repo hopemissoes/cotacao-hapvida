@@ -547,22 +547,67 @@ def cotar_cidade(cidade):
         except Exception as e:
             print(f"[AVISO] Nao encontrou operadora Hapvida: {e}")
 
-        # 12.2 - Clicar em "Hapvida [Cidade] + Odonto" (tabela com odonto)
-        print(f"[*] 12.2 - Selecionando tabela + Odonto...")
-        try:
-            # Procura pelo texto que contem "+ Odonto" (com odonto incluso)
-            tabelas = driver.find_elements(By.XPATH, "//*[contains(text(), '+ Odonto') and not(contains(text(), 'SEM'))]")
-            for tab in tabelas:
-                try:
-                    if tab.is_displayed():
-                        driver.execute_script("arguments[0].click();", tab)
-                        print("[*] Clicou na tabela + Odonto")
-                        break
-                except:
-                    continue
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"[AVISO] Nao encontrou tabela + Odonto: {e}")
+        # 12.2 - Clicar na primeira tabela disponivel
+        adicionar_log("Selecionando primeira tabela disponivel...", "info")
+        tabela_selecionada = False
+
+        # Aguarda as opcoes de tabela aparecerem
+        time.sleep(2)
+
+        # Estrategia 1: Procura elementos que parecem ser opcoes de tabela
+        seletores_tabela = [
+            "//*[contains(text(), '+ Odonto') and not(contains(text(), 'SEM'))]",  # Com odonto (preferido)
+            "//*[contains(text(), 'Hapvida') and contains(text(), '2 a')]",  # Hapvida com faixa
+            "//*[contains(text(), '2 a 29')]",  # Qualquer com faixa
+            "//*[contains(text(), '2 a')]",  # Texto parcial da faixa
+            "//div[contains(text(), 'Hapvida')]",  # Qualquer div com Hapvida
+        ]
+
+        for seletor in seletores_tabela:
+            if tabela_selecionada:
+                break
+            try:
+                elementos = driver.find_elements(By.XPATH, seletor)
+                for elem in elementos:
+                    try:
+                        if elem.is_displayed():
+                            texto = elem.text or ""
+                            # Ignora se for apenas o titulo "Escolher Tabela:"
+                            if "escolher" in texto.lower() and "tabela" in texto.lower() and len(texto) < 20:
+                                continue
+                            adicionar_log(f"Encontrada tabela: '{texto[:50]}...'", "info")
+                            driver.execute_script("arguments[0].click();", elem)
+                            adicionar_log("Clicou na tabela!", "sucesso")
+                            tabela_selecionada = True
+                            break
+                    except:
+                        continue
+            except:
+                continue
+
+        # Estrategia 2: Clica no primeiro elemento apos "Escolher Tabela:"
+        if not tabela_selecionada:
+            try:
+                adicionar_log("Tentando clicar no primeiro elemento apos 'Escolher Tabela:'...", "info")
+                # Busca o container de tabelas e clica no primeiro filho clicavel
+                elementos = driver.find_elements(By.XPATH, "//div[contains(text(), 'Escolher Tabela')]/following-sibling::*")
+                for elem in elementos:
+                    try:
+                        if elem.is_displayed() and elem.text:
+                            adicionar_log(f"Clicando em: '{elem.text[:50]}...'", "info")
+                            driver.execute_script("arguments[0].click();", elem)
+                            tabela_selecionada = True
+                            break
+                    except:
+                        continue
+            except Exception as e:
+                adicionar_log(f"Erro na estrategia 2: {e}", "aviso")
+
+        if not tabela_selecionada:
+            adicionar_log("AVISO: Nenhuma tabela foi selecionada!", "aviso")
+            capturar_screenshot(driver, "erro_tabela")
+
+        time.sleep(1.5)
 
         # 12.3 - Clicar em "Ambulatorial" (tipo de plano)
         print("[*] 12.3 - Selecionando Ambulatorial...")
@@ -785,46 +830,62 @@ def cotar_proxima_cidade(cidade):
                 continue
         time.sleep(1.5)
 
-        # Tabela - Clica na PRIMEIRA opcao que aparece apos "Escolher Tabela:"
-        # (o nome varia: "Hapvida Recife + Odonto", "Hapvida Fortaleza", etc)
-        print("[*] Selecionando primeira tabela disponivel...")
-        clicou_tabela = False
+        # Tabela - Clica na PRIMEIRA opcao disponivel
+        adicionar_log("Selecionando primeira tabela disponivel...", "info")
+        tabela_selecionada = False
 
-        # Metodo 1: Procura por elemento que contem "Hapvida" e a cidade ou "2 a 29"
-        tabelas = driver.find_elements(By.XPATH, "//*[contains(text(), 'Hapvida') and contains(text(), '2 a 29')]")
-        for tab in tabelas:
+        # Aguarda as opcoes de tabela aparecerem
+        time.sleep(2)
+
+        # Estrategia 1: Procura elementos que parecem ser opcoes de tabela
+        seletores_tabela = [
+            "//*[contains(text(), '+ Odonto') and not(contains(text(), 'SEM'))]",
+            "//*[contains(text(), 'Hapvida') and contains(text(), '2 a')]",
+            "//*[contains(text(), '2 a 29')]",
+            "//*[contains(text(), '2 a')]",
+            "//div[contains(text(), 'Hapvida')]",
+        ]
+
+        for seletor in seletores_tabela:
+            if tabela_selecionada:
+                break
             try:
-                texto = tab.text or ""
-                # Ignora se tiver "SEM" (sem odonto) - queremos a primeira opcao com odonto se houver
-                if tab.is_displayed() and "SEM" not in texto.upper():
-                    driver.execute_script("arguments[0].click();", tab)
-                    print(f"[*] Clicou na tabela: {texto}")
-                    clicou_tabela = True
-                    break
+                elementos = driver.find_elements(By.XPATH, seletor)
+                for elem in elementos:
+                    try:
+                        if elem.is_displayed():
+                            texto = elem.text or ""
+                            if "escolher" in texto.lower() and "tabela" in texto.lower() and len(texto) < 20:
+                                continue
+                            adicionar_log(f"Encontrada tabela: '{texto[:50]}...'", "info")
+                            driver.execute_script("arguments[0].click();", elem)
+                            adicionar_log("Clicou na tabela!", "sucesso")
+                            tabela_selecionada = True
+                            break
+                    except:
+                        continue
             except:
                 continue
 
-        # Metodo 2: Se nao encontrou, clica na primeira opcao que tiver "2 a 29"
-        if not clicou_tabela:
-            tabelas2 = driver.find_elements(By.XPATH, "//*[contains(text(), '2 a 29')]")
-            for tab in tabelas2:
-                try:
-                    if tab.is_displayed():
-                        driver.execute_script("arguments[0].click();", tab)
-                        print(f"[*] Clicou na tabela (metodo 2): {tab.text}")
-                        clicou_tabela = True
-                        break
-                except:
-                    continue
-
-        # Metodo 3: Clica em qualquer elemento logo apos "Escolher Tabela:"
-        if not clicou_tabela:
+        # Estrategia 2: Clica no primeiro elemento apos "Escolher Tabela:"
+        if not tabela_selecionada:
             try:
-                primeira_tabela = driver.find_element(By.XPATH, "//div[contains(text(), 'Escolher Tabela:')]/following-sibling::div[1]")
-                driver.execute_script("arguments[0].click();", primeira_tabela)
-                print("[*] Clicou na primeira tabela (metodo 3)")
-            except:
-                pass
+                adicionar_log("Tentando clicar no primeiro elemento apos 'Escolher Tabela:'...", "info")
+                elementos = driver.find_elements(By.XPATH, "//div[contains(text(), 'Escolher Tabela')]/following-sibling::*")
+                for elem in elementos:
+                    try:
+                        if elem.is_displayed() and elem.text:
+                            adicionar_log(f"Clicando em: '{elem.text[:50]}...'", "info")
+                            driver.execute_script("arguments[0].click();", elem)
+                            tabela_selecionada = True
+                            break
+                    except:
+                        continue
+            except Exception as e:
+                adicionar_log(f"Erro na estrategia 2: {e}", "aviso")
+
+        if not tabela_selecionada:
+            adicionar_log("AVISO: Nenhuma tabela foi selecionada!", "aviso")
 
         time.sleep(1.5)
 
