@@ -1029,13 +1029,22 @@ def extrair_valores(driver):
 
         adicionar_log("Extraindo valores da tabela...", "info")
 
-        # Estrategia 1: Busca especificamente pela coluna "De:"
-        # Procura elementos que estao na mesma linha/coluna que o header "De:"
+        # Detecta se existem duas colunas (De/Por) verificando o header "Por:" na pagina
+        tem_coluna_por = False
+        try:
+            elementos_por = driver.find_elements(By.XPATH, "//*[contains(text(), 'Por:')]")
+            for elem in elementos_por:
+                if elem.is_displayed() and elem.text.strip() == "Por:":
+                    tem_coluna_por = True
+                    adicionar_log("Detectada coluna 'Por:' na tabela", "info")
+                    break
+        except:
+            pass
+
+        # Busca valores monetarios na pagina
         valores_de = []
 
         try:
-            # Tenta encontrar a tabela e pegar valores da coluna "De:"
-            # Busca por elementos que contenham valores monetarios
             todos_elementos = driver.find_elements(By.XPATH, "//*")
 
             valores_encontrados = []
@@ -1064,20 +1073,19 @@ def extrair_valores(driver):
 
             adicionar_log(f"Valores encontrados: {len(valores_unicos)}", "info")
 
-            # Se temos exatamente 20 valores (10 de cada coluna), pega apenas os pares (coluna "De:")
+            # Se tem coluna "Por:", pega apenas valores da coluna "De:" (indices pares)
             # Os valores aparecem na ordem: De1, Por1, De2, Por2, ...
-            # Entao pegamos indices 0, 2, 4, 6, 8, 10, 12, 14, 16, 18
-            if len(valores_unicos) >= 20:
-                adicionar_log("Detectadas duas colunas (De/Por) - pegando apenas coluna 'De:'", "info")
+            if tem_coluna_por and len(valores_unicos) >= 20:
+                adicionar_log("Filtrando apenas coluna 'De:' (indices pares)", "info")
                 valores_de = [valores_unicos[i] for i in range(0, 20, 2)]
             elif len(valores_unicos) >= 10:
-                # Se temos apenas 10 valores, usa todos
+                # Se temos apenas uma coluna, usa os primeiros 10 valores
                 valores_de = valores_unicos[:10]
             else:
                 valores_de = valores_unicos
 
         except Exception as e:
-            adicionar_log(f"Erro na estrategia 1: {e}", "aviso")
+            adicionar_log(f"Erro ao extrair valores: {e}", "aviso")
 
         # Monta o resultado final
         for i, valor in enumerate(valores_de[:10]):
