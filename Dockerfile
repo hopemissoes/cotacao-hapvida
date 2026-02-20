@@ -49,8 +49,6 @@ ENV PYTHONUNBUFFERED=1
 ENV DISPLAY=:99
 ENV CHROME_BIN=/usr/bin/chromium
 ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
-# Defina ANTHROPIC_API_KEY no deploy (ex: -e ANTHROPIC_API_KEY=sk-ant-...)
-# ENV ANTHROPIC_API_KEY=
 
 # Comando para iniciar a aplicacao
 CMD ["python", "app_cotacao.py"]

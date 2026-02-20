@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotacao Hapvida - AI-Driven</title>
+    <title>Cotacao Hapvida - Sistema de Cotacao</title>
     <style>
         * {
             margin: 0;
@@ -39,39 +39,11 @@
             opacity: 0.9;
         }
 
-        .header .ai-badge {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            margin-top: 8px;
-        }
-
         .main-card {
             background: white;
             border-radius: 16px;
             padding: 30px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffc107;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
         }
 
         .status-bar {
@@ -82,8 +54,6 @@
             background: #f5f5f5;
             border-radius: 8px;
             margin-bottom: 25px;
-            flex-wrap: wrap;
-            gap: 10px;
         }
 
         .status-item {
@@ -99,8 +69,13 @@
             background: #ccc;
         }
 
-        .status-dot.online { background: #4caf50; }
-        .status-dot.offline { background: #f44336; }
+        .status-dot.online {
+            background: #4caf50;
+        }
+
+        .status-dot.offline {
+            background: #f44336;
+        }
 
         .btn-login {
             padding: 8px 20px;
@@ -113,7 +88,9 @@
             transition: background 0.3s;
         }
 
-        .btn-login:hover { background: #e8850d; }
+        .btn-login:hover {
+            background: #e8850d;
+        }
 
         .form-section {
             margin-bottom: 25px;
@@ -127,85 +104,36 @@
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 20px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             color: #333;
             font-weight: 500;
-            font-size: 14px;
         }
 
         .form-group textarea {
             width: 100%;
-            padding: 12px;
+            padding: 15px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 15px;
+            font-size: 16px;
             resize: vertical;
-            min-height: 120px;
+            min-height: 150px;
             transition: border-color 0.3s;
         }
 
-        .form-group textarea:focus,
-        .form-group select:focus,
-        .form-group input:focus {
+        .form-group textarea:focus {
             outline: none;
             border-color: #1e3c72;
         }
 
-        .form-group select,
-        .form-group input[type="text"],
-        .form-group input[type="number"] {
-            width: 100%;
-            padding: 10px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-            background: white;
-        }
-
         .form-group small {
             color: #666;
-            font-size: 12px;
+            font-size: 13px;
         }
-
-        .config-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
-
-        @media (max-width: 600px) {
-            .config-grid { grid-template-columns: 1fr; }
-        }
-
-        .config-toggle {
-            cursor: pointer;
-            color: #1e3c72;
-            font-weight: 500;
-            padding: 8px 0;
-            user-select: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .config-toggle:hover { text-decoration: underline; }
-
-        .config-panel {
-            display: none;
-            padding: 16px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .config-panel.show { display: block; }
 
         .btn-cotar {
             width: 100%;
@@ -237,7 +165,9 @@
             padding: 30px;
         }
 
-        .loading.show { display: block; }
+        .loading.show {
+            display: block;
+        }
 
         .spinner {
             width: 50px;
@@ -254,27 +184,14 @@
             100% { transform: rotate(360deg); }
         }
 
-        .ai-steps {
-            text-align: left;
-            max-width: 500px;
-            margin: 15px auto 0;
-            font-size: 13px;
-            color: #555;
-            background: #f5f5f5;
-            border-radius: 8px;
-            padding: 12px;
-        }
-
-        .ai-steps p {
-            margin-bottom: 4px;
-        }
-
         .results-section {
             margin-top: 30px;
             display: none;
         }
 
-        .results-section.show { display: block; }
+        .results-section.show {
+            display: block;
+        }
 
         .results-section h3 {
             color: #1e3c72;
@@ -304,7 +221,7 @@
             align-items: center;
         }
 
-        .badge {
+        .result-card h4 .badge {
             font-size: 12px;
             padding: 4px 10px;
             background: #4caf50;
@@ -312,7 +229,9 @@
             border-radius: 20px;
         }
 
-        .badge.error { background: #f44336; }
+        .result-card h4 .badge.error {
+            background: #f44336;
+        }
 
         .valores-table {
             width: 100%;
@@ -331,10 +250,17 @@
             color: white;
         }
 
-        .valores-table tr:nth-child(even) { background: #f5f5f5; }
-        .valores-table tr:hover { background: #e8f4fc; }
+        .valores-table tr:nth-child(even) {
+            background: #f5f5f5;
+        }
 
-        .json-output { margin-top: 15px; }
+        .valores-table tr:hover {
+            background: #e8f4fc;
+        }
+
+        .json-output {
+            margin-top: 15px;
+        }
 
         .json-output summary {
             cursor: pointer;
@@ -366,7 +292,9 @@
             margin-left: 10px;
         }
 
-        .btn-copy:hover { background: #45a049; }
+        .btn-copy:hover {
+            background: #45a049;
+        }
 
         .footer {
             text-align: center;
@@ -380,24 +308,14 @@
     <div class="container">
         <div class="header">
             <h1>Cotacao Hapvida</h1>
-            <p>Sistema de cotacao de planos de saude</p>
-            <span class="ai-badge">AI-Driven com Claude Vision</span>
+            <p>Sistema automatizado de cotacao de planos de saude</p>
         </div>
 
         <div class="main-card">
-            <div id="alertNoKey" class="alert alert-warning" style="display:none;">
-                <strong>ANTHROPIC_API_KEY nao configurada!</strong>
-                Defina a variavel de ambiente ANTHROPIC_API_KEY para usar o agente de IA.
-            </div>
-
             <div class="status-bar">
                 <div class="status-item">
                     <span class="status-dot" id="statusDot"></span>
                     <span id="statusText">Verificando...</span>
-                </div>
-                <div class="status-item">
-                    <span class="status-dot" id="aiDot"></span>
-                    <span id="aiText">IA: ...</span>
                 </div>
                 <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Iniciar Sessao</button>
             </div>
@@ -407,74 +325,16 @@
                 <div class="form-group">
                     <label for="cidades">Digite as cidades (uma por linha):</label>
                     <textarea id="cidades" placeholder="Recife&#10;Fortaleza&#10;Salvador&#10;Natal&#10;..."></textarea>
-                    <small>O agente de IA vai buscar e selecionar cada cidade automaticamente</small>
+                    <small>Exemplo: Digite "Recife" e o sistema buscara "Recife - PE" automaticamente</small>
                 </div>
-
-                <div class="config-toggle" onclick="toggleConfig()">
-                    <span id="configArrow">&#9654;</span> Configuracoes da Cotacao
-                </div>
-
-                <div class="config-panel" id="configPanel">
-                    <div class="alert alert-info">
-                        Mude estes parametros conforme necessario. A IA vai adaptar a navegacao
-                        para selecionar as opcoes corretas no site.
-                    </div>
-                    <div class="config-grid">
-                        <div class="form-group">
-                            <label for="operadora">Operadora</label>
-                            <select id="operadora">
-                                <option value="Hapvida">Hapvida</option>
-                                <option value="Hapvida - Affix">Hapvida - Affix</option>
-                                <option value="Hapvida - CORPe">Hapvida - CORPe</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="tabela">Tabela</label>
-                            <select id="tabela">
-                                <option value="+ Odonto">Com Odonto (+ Odonto)</option>
-                                <option value="SEM Odonto">Sem Odonto</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="plano">Tipo de Plano</label>
-                            <select id="plano">
-                                <option value="Ambulatorial">Ambulatorial</option>
-                                <option value="Nosso Plano">Nosso Plano</option>
-                                <option value="Nosso Medico">Nosso Medico</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="acomodacao">Acomodacao</label>
-                            <select id="acomodacao">
-                                <option value="Sem acomodacao / Com coparticipacao">Sem acomodacao / Com coparticipacao</option>
-                                <option value="Sem acomodacao / Com Coparticipacao Parcial">Sem acomodacao / Com Coparticipacao Parcial</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="tipoEmpresa">Tipo de Empresa</label>
-                            <select id="tipoEmpresa">
-                                <option value="MEI - Empresario individual">MEI - Empresario individual</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="vidasPorFaixa">Vidas por Faixa Etaria</label>
-                            <input type="number" id="vidasPorFaixa" value="1" min="1" max="29">
-                        </div>
-                    </div>
-                </div>
-
                 <button class="btn-cotar" id="btnCotar" onclick="executarCotacao()">
-                    Iniciar Cotacao (AI)
+                    Iniciar Cotacao
                 </button>
             </div>
 
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                <p id="loadingText">O agente de IA esta processando...</p>
-                <div class="ai-steps" id="aiSteps">
-                    <p>A IA analisa a pagina visualmente a cada passo e decide o que fazer.</p>
-                    <p>Isso permite adaptacao a mudancas no site.</p>
-                </div>
+                <p id="loadingText">Processando cotacoes...</p>
             </div>
 
             <div class="results-section" id="resultsSection">
@@ -484,26 +344,25 @@
         </div>
 
         <div class="footer">
-            <p>Cotacao Hapvida - AI-Driven | Claude Vision + Selenium</p>
+            <p>Desenvolvido com Claude AI | 2025</p>
         </div>
     </div>
 
     <script>
+        // Verifica status ao carregar
         document.addEventListener('DOMContentLoaded', verificarStatus);
 
         function verificarStatus() {
             fetch('/status')
-                .then(r => r.json())
+                .then(response => response.json())
                 .then(data => {
                     const dot = document.getElementById('statusDot');
                     const text = document.getElementById('statusText');
                     const btn = document.getElementById('btnLogin');
-                    const aiDot = document.getElementById('aiDot');
-                    const aiText = document.getElementById('aiText');
 
                     if (data.logado) {
                         dot.className = 'status-dot online';
-                        text.textContent = 'Conectado';
+                        text.textContent = 'Conectado ao Cotador Simplificado';
                         btn.textContent = 'Reconectar';
                     } else if (data.navegador_ativo) {
                         dot.className = 'status-dot';
@@ -514,88 +373,70 @@
                         text.textContent = 'Desconectado';
                         btn.textContent = 'Iniciar Sessao';
                     }
-
-                    if (data.ai_configurada) {
-                        aiDot.className = 'status-dot online';
-                        aiText.textContent = 'IA: Configurada';
-                        document.getElementById('alertNoKey').style.display = 'none';
-                    } else {
-                        aiDot.className = 'status-dot offline';
-                        aiText.textContent = 'IA: Sem API Key';
-                        document.getElementById('alertNoKey').style.display = 'block';
-                    }
                 })
-                .catch(() => {
-                    document.getElementById('statusText').textContent = 'Erro ao verificar';
+                .catch(err => {
+                    document.getElementById('statusText').textContent = 'Erro ao verificar status';
                 });
-        }
-
-        function toggleConfig() {
-            const panel = document.getElementById('configPanel');
-            const arrow = document.getElementById('configArrow');
-            panel.classList.toggle('show');
-            arrow.innerHTML = panel.classList.contains('show') ? '&#9660;' : '&#9654;';
         }
 
         function fazerLogin() {
             const btn = document.getElementById('btnLogin');
             btn.disabled = true;
-            btn.textContent = 'Conectando (IA)...';
+            btn.textContent = 'Conectando...';
 
             fetch('/login', { method: 'POST' })
-                .then(r => r.json())
+                .then(response => response.json())
                 .then(data => {
                     if (data.sucesso) {
                         alert('Login realizado com sucesso!');
                     } else {
-                        alert('Falha no login: ' + (data.erro || 'Verifique logs'));
+                        alert('Falha no login. Verifique o navegador.');
                     }
                     verificarStatus();
                     btn.disabled = false;
                 })
                 .catch(err => {
-                    alert('Erro: ' + err);
+                    alert('Erro ao fazer login: ' + err);
                     btn.disabled = false;
                     verificarStatus();
                 });
         }
 
         function executarCotacao() {
-            const cidades = document.getElementById('cidades').value
-                .split('\n').filter(c => c.trim());
+            const textarea = document.getElementById('cidades');
+            const cidades = textarea.value.split('\n').filter(c => c.trim());
 
             if (cidades.length === 0) {
                 alert('Digite pelo menos uma cidade!');
                 return;
             }
 
-            const config = {
-                operadora: document.getElementById('operadora').value,
-                tabela: document.getElementById('tabela').value,
-                plano: document.getElementById('plano').value,
-                acomodacao: document.getElementById('acomodacao').value,
-                tipo_empresa: document.getElementById('tipoEmpresa').value,
-                vidas_por_faixa: document.getElementById('vidasPorFaixa').value
-            };
-
+            // Mostra loading
             document.getElementById('loading').classList.add('show');
             document.getElementById('resultsSection').classList.remove('show');
             document.getElementById('btnCotar').disabled = true;
 
-            document.getElementById('loadingText').textContent =
-                'O agente de IA esta cotando ' + cidades.length + ' cidade(s)...';
+            let cidadesProcessadas = 0;
+            const totalCidades = cidades.length;
+
+            function atualizarLoading() {
+                document.getElementById('loadingText').textContent =
+                    `Processando ${cidadesProcessadas + 1} de ${totalCidades}: ${cidades[cidadesProcessadas]}...`;
+            }
+
+            atualizarLoading();
 
             fetch('/cotar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ cidades: cidades, config: config })
+                body: JSON.stringify({ cidades: cidades })
             })
-            .then(r => r.json())
+            .then(response => response.json())
             .then(data => {
                 exibirResultados(data);
             })
             .catch(err => {
-                alert('Erro: ' + err);
+                alert('Erro ao executar cotacao: ' + err);
             })
             .finally(() => {
                 document.getElementById('loading').classList.remove('show');
@@ -609,10 +450,9 @@
 
             resultados.forEach((resultado, index) => {
                 const card = document.createElement('div');
-                const isError = resultado.sucesso === false;
-                card.className = 'result-card' + (isError ? ' error' : '');
+                card.className = 'result-card' + (resultado.sucesso === false ? ' error' : '');
 
-                if (isError) {
+                if (resultado.sucesso === false) {
                     card.innerHTML = `
                         <h4>
                             ${resultado.cidade}
@@ -621,9 +461,9 @@
                         <p>Erro: ${resultado.erro || 'Erro desconhecido'}</p>
                     `;
                 } else {
-                    let rows = '';
-                    (resultado.valores || []).forEach(v => {
-                        rows += '<tr><td>' + v.faixa_etaria + '</td><td>' + v.valor + '</td></tr>';
+                    let tableRows = '';
+                    resultado.valores.forEach(v => {
+                        tableRows += `<tr><td>${v.faixa_etaria}</td><td>${v.valor}</td></tr>`;
                     });
 
                     const jsonStr = JSON.stringify(resultado.valores, null, 2);
@@ -634,8 +474,10 @@
                             <span class="badge">Sucesso</span>
                         </h4>
                         <table class="valores-table">
-                            <thead><tr><th>Faixa Etaria</th><th>Valor</th></tr></thead>
-                            <tbody>${rows}</tbody>
+                            <thead>
+                                <tr><th>Faixa Etaria</th><th>Valor</th></tr>
+                            </thead>
+                            <tbody>${tableRows}</tbody>
                         </table>
                         <details class="json-output">
                             <summary>
@@ -651,12 +493,16 @@
             });
 
             document.getElementById('resultsSection').classList.add('show');
+
+            // Salva resultados globalmente para copiar
             window.resultadosGlobais = resultados;
         }
 
         function copiarJSON(index) {
             const json = JSON.stringify(window.resultadosGlobais[index].valores, null, 2);
-            navigator.clipboard.writeText(json).then(() => alert('JSON copiado!'));
+            navigator.clipboard.writeText(json).then(() => {
+                alert('JSON copiado!');
+            });
         }
     </script>
 </body>
