@@ -3,13 +3,16 @@
 APLICACAO WEB - COTACAO HAPVIDA
 =============================================================================
 Aplicacao Flask para cotar planos Hapvida em multiplas cidades.
+Compara PME (empresarial) vs PF/Coletivos (individual) e retorna o mais barato.
 
 Acesse: http://localhost:5000
-
-Autor: Claude AI
-Data: 03/02/2025
 =============================================================================
 """
+
+import sys
+import json
+import time
+import os
 
 from flask import Flask, render_template, request, jsonify
 from selenium import webdriver
@@ -18,12 +21,9 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import Select
-from webdriver_manager.chrome import ChromeDriverManager
-import time
-import json
-import threading
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 app = Flask(__name__)
 
@@ -34,124 +34,53 @@ EMAIL = "jessicamendesbarbosa5@gmail.com"
 SENHA = "amovoced28"
 URL_LOGIN = "https://app.cotadorsimplificado.com.br/login"
 
+FAIXAS = [
+    "0 a 18 anos", "19 a 23 anos", "24 a 28 anos",
+    "29 a 33 anos", "34 a 38 anos", "39 a 43 anos",
+    "44 a 48 anos", "49 a 53 anos", "54 a 58 anos",
+    "59 anos ou mais"
+]
+
 # Variavel global para armazenar o driver (sessao do navegador)
 driver_global = None
 logado = False
-primeira_cotacao = True  # Controla se e a primeira cotacao da sessao
+
 
 # ============================================
-# FUNCOES DE AUTOMACAO
+# HELPERS
 # ============================================
-
-def fechar_popups(driver):
-    """Fecha qualquer popup/aviso que esteja bloqueando a tela."""
-    popups_fechados = 0
-
-    # Lista de seletores comuns para botoes de fechar popups
-    seletores_fechar = [
-        # Botoes de fechar com X
-        "button[class*='close']",
-        "button[class*='dismiss']",
-        "button[class*='fechar']",
-        "[class*='close-button']",
-        "[class*='modal-close']",
-        "[aria-label='Close']",
-        "[aria-label='Fechar']",
-        # SVGs de fechar (X)
-        "svg[class*='close']",
-        # Botoes com texto
-        "//button[contains(text(), 'Fechar')]",
-        "//button[contains(text(), 'OK')]",
-        "//button[contains(text(), 'Entendi')]",
-        "//button[contains(text(), 'Continuar')]",
-        "//button[contains(text(), 'Pular')]",
-        "//span[contains(text(), 'X')]",
-        # Overlays/backdrops clicaveis
-        "[class*='overlay']",
-        "[class*='backdrop']",
-        # Icones de fechar
-        "i[class*='close']",
-        "i[class*='times']",
-    ]
-
-    for seletor in seletores_fechar:
-        try:
-            if seletor.startswith("//"):
-                # XPATH
-                elementos = driver.find_elements(By.XPATH, seletor)
-            else:
-                # CSS
-                elementos = driver.find_elements(By.CSS_SELECTOR, seletor)
-
-            for elem in elementos:
-                try:
-                    if elem.is_displayed() and elem.is_enabled():
-                        # Verifica se o elemento esta na frente (visivel)
-                        driver.execute_script("arguments[0].click();", elem)
-                        popups_fechados += 1
-                        print(f"[*] Popup fechado: {seletor}")
-                        time.sleep(0.5)
-                except:
-                    pass
-        except:
-            pass
-
-    # Tenta pressionar ESC para fechar modais
-    try:
-        from selenium.webdriver.common.keys import Keys
-        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
-        time.sleep(0.3)
-    except:
-        pass
-
-    return popups_fechados
+def clique_real(driver, el):
+    """Clica via ActionChains na posicao central do elemento (Bubble.io ignora .click() sintetico)."""
+    rect = driver.execute_script("""
+        var r = arguments[0].getBoundingClientRect();
+        return {x: Math.round(r.x + r.width/2), y: Math.round(r.y + r.height/2)};
+    """, el)
+    actions = ActionChains(driver)
+    actions.move_by_offset(rect['x'], rect['y']).click().perform()
+    actions.reset_actions()
 
 
-def clicar_elemento_seguro(driver, elemento, tentativas=3):
-    """Tenta clicar em um elemento, fechando popups se necessario."""
-    for tentativa in range(tentativas):
-        try:
-            # Primeiro tenta clicar normalmente
-            elemento.click()
-            return True
-        except Exception as e:
-            if "element click intercepted" in str(e).lower() or "not clickable" in str(e).lower():
-                print(f"[*] Clique bloqueado, tentando fechar popups... (tentativa {tentativa + 1})")
-                fechar_popups(driver)
-                time.sleep(0.5)
-                try:
-                    # Tenta com JavaScript
-                    driver.execute_script("arguments[0].click();", elemento)
-                    return True
-                except:
-                    pass
-            else:
-                # Outro tipo de erro
-                if tentativa == tentativas - 1:
-                    raise e
-    return False
+def clique_coords(driver, x, y):
+    """Clica via ActionChains em coordenadas absolutas."""
+    actions = ActionChains(driver)
+    actions.move_by_offset(x, y).click().perform()
+    actions.reset_actions()
 
 
 def iniciar_navegador():
-    """Inicia o navegador Chrome/Chromium."""
+    """Inicia o Chrome em modo headless."""
     global driver_global
-    import os
 
     print("[*] Iniciando navegador...")
 
     chrome_options = Options()
-    # Opcoes basicas
-    chrome_options.add_argument("--start-maximized")
-    chrome_options.add_argument("--disable-notifications")
-    chrome_options.add_argument("--disable-popup-blocking")
-    chrome_options.add_argument("--window-size=1920,1080")
-
-    # Opcoes para rodar em container/VPS
-    chrome_options.add_argument("--headless=new")  # Novo modo headless
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--disable-notifications")
+    chrome_options.add_argument("--disable-popup-blocking")
     chrome_options.add_argument("--disable-extensions")
     chrome_options.add_argument("--disable-setuid-sandbox")
     chrome_options.add_argument("--single-process")
@@ -167,14 +96,11 @@ def iniciar_navegador():
         chrome_options.binary_location = chromium_bin
         print(f"[*] Usando Chromium: {chromium_bin}")
 
-    # Lista de caminhos para o ChromeDriver
     chromedriver_paths = [
         os.environ.get("CHROMEDRIVER_PATH", ""),
         "/usr/bin/chromedriver",
         "/usr/local/bin/chromedriver",
     ]
-
-    # Tenta usar o ChromeDriver do sistema primeiro
     for path in chromedriver_paths:
         if path and os.path.exists(path):
             try:
@@ -189,9 +115,9 @@ def iniciar_navegador():
 
     # Fallback: usa webdriver-manager
     print("[*] Usando webdriver-manager como fallback...")
+    from webdriver_manager.chrome import ChromeDriverManager
     service = Service(ChromeDriverManager().install())
     driver_global = webdriver.Chrome(service=service, options=chrome_options)
-
     return driver_global
 
 
@@ -204,16 +130,12 @@ def fazer_login():
 
     driver = driver_global
 
-    print(f"[*] Acessando: {URL_LOGIN}")
+    print("[*] Acessando login...")
     driver.get(URL_LOGIN)
-
     wait = WebDriverWait(driver, 20)
+    time.sleep(3)
 
     try:
-        print("[*] Aguardando pagina carregar...")
-        time.sleep(3)
-
-        print("[*] Preenchendo email...")
         campo_email = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='email'], input[placeholder='Seu email']"))
         )
@@ -221,42 +143,27 @@ def fazer_login():
         campo_email.send_keys(EMAIL)
         time.sleep(0.5)
 
-        print("[*] Clicando em 'Continuar com Email'...")
         botao_continuar = driver.find_element(By.XPATH, "//button[contains(., 'Continuar com Email')]")
         botao_continuar.click()
-
-        print("[*] Aguardando campo de senha...")
-        time.sleep(2)
+        time.sleep(3)
 
         campo_senha = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='password']"))
         )
-
-        print("[*] Preenchendo senha...")
         campo_senha.clear()
         campo_senha.send_keys(SENHA)
         time.sleep(0.5)
 
-        print("[*] Clicando em 'Entrar'...")
         botao_entrar = driver.find_element(By.XPATH, "//button[contains(., 'Entrar')]")
         botao_entrar.click()
-
-        print("[*] Aguardando login...")
         time.sleep(4)
 
         if "login" not in driver.current_url.lower():
             print("[OK] Login realizado com sucesso!")
             logado = True
-
-            # Fecha popups que aparecem apos o login
-            print("[*] Verificando popups pos-login...")
-            time.sleep(2)
-            fechar_popups(driver)
-            time.sleep(1)
-
             return True
         else:
-            print("[ERRO] Falha no login.")
+            print("[ERRO] Falha no login")
             return False
 
     except Exception as e:
@@ -264,670 +171,568 @@ def fazer_login():
         return False
 
 
-def cotar_cidade(cidade):
-    """Executa a cotacao para uma cidade especifica."""
-    global driver_global, logado
-
-    if not logado or driver_global is None:
-        if not fazer_login():
-            return {"erro": "Falha no login"}
-
-    driver = driver_global
-    wait = WebDriverWait(driver, 15)
-
+def fechar_popups(driver):
+    """Fecha popups que bloqueiam a tela."""
+    seletores = [
+        "button[class*='close']", "button[class*='dismiss']",
+        "[aria-label='Close']", "[aria-label='Fechar']",
+    ]
+    for sel in seletores:
+        try:
+            for elem in driver.find_elements(By.CSS_SELECTOR, sel):
+                if elem.is_displayed():
+                    driver.execute_script("arguments[0].click();", elem)
+                    time.sleep(0.3)
+        except:
+            pass
     try:
-        # Vai para pagina inicial
-        driver.get("https://app.cotadorsimplificado.com.br/")
-        time.sleep(2)
-
-        # Fecha qualquer popup que apareca
-        print("[*] Verificando popups...")
-        fechar_popups(driver)
-        time.sleep(1)
-
-        # ETAPA 2: Cotar Hapvida
-        print(f"[*] Iniciando cotacao para {cidade}...")
-        fechar_popups(driver)  # Fecha popups antes de clicar
-        botao_hapvida = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]"))
-        )
-        clicar_elemento_seguro(driver, botao_hapvida)
-        time.sleep(2)
-
-        # ETAPA 3: PME ate 29 vidas
-        print("[*] Selecionando PME ate 29 vidas...")
-        fechar_popups(driver)  # Fecha popups antes de clicar
-        opcao_pme = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PME até 29 vidas')]"))
-        )
-        clicar_elemento_seguro(driver, opcao_pme)
-        time.sleep(2)
-
-        # ETAPA 4: Nome do cliente
-        print("[*] Preenchendo nome do cliente...")
-        campo_nome = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='cliente']"))
-        )
-        campo_nome.clear()
-        campo_nome.send_keys("teste")
-        time.sleep(1)
-
-        # Fecha dropdown se aparecer
-        try:
-            driver.find_element(By.CSS_SELECTOR, "svg[class*='close'], button[class*='close']").click()
-        except:
-            pass
-
-        # ETAPA 5: Avancar
-        print("[*] Avancando...")
-        clicar_avancar(driver)
-        time.sleep(2)
-
-        # ETAPA 6: Selecionar cidade
-        print(f"[*] Selecionando cidade: {cidade}...")
-
-        # Aguarda um pouco mais para a pagina carregar
-        time.sleep(1)
-
-        # O campo de cidade tem um placeholder que pode conter o nome da cidade anterior
-        # Ex: "Fortaleza - CE", "Recife - PE", etc.
-        # Procuramos por input que esta proximo ao texto "DIGITE o nome da CIDADE"
-        campo_cidade = None
-
-        # Metodo 1: Busca pelo texto indicativo proximo
-        try:
-            # Procura todos os inputs de texto
-            inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])")
-            for inp in inputs:
-                try:
-                    if inp.is_displayed() and inp.is_enabled():
-                        placeholder = inp.get_attribute("placeholder") or ""
-                        # O placeholder contem " - " que indica cidade/estado
-                        if " - " in placeholder or "cidade" in placeholder.lower():
-                            campo_cidade = inp
-                            print(f"[*] Campo cidade encontrado com placeholder: {placeholder}")
-                            break
-                except:
-                    continue
-        except:
-            pass
-
-        # Metodo 2: Procura pelo XPATH relativo ao label
-        if not campo_cidade:
-            try:
-                campo_cidade = driver.find_element(By.XPATH, "//div[contains(text(), 'CIDADE')]/ancestor::div[1]//input")
-            except:
-                pass
-
-        if campo_cidade:
-            # Usa JavaScript para selecionar todo o texto e substituir
-            driver.execute_script("arguments[0].scrollIntoView(true);", campo_cidade)
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", campo_cidade)
-            time.sleep(0.3)
-            # Seleciona todo o texto existente
-            driver.execute_script("arguments[0].select();", campo_cidade)
-            time.sleep(0.2)
-            # Digita a nova cidade (substitui o texto selecionado)
-            campo_cidade.send_keys(cidade)
-        else:
-            raise Exception("Campo de cidade nao encontrado")
-
-        time.sleep(2)
-
-        # Clica na opcao do dropdown
-        try:
-            opcao_cidade = wait.until(
-                EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
-            )
-            opcao_cidade.click()
-        except:
-            try:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
-                opcao_cidade.click()
-            except:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}')]")
-                driver.execute_script("arguments[0].click();", opcao_cidade)
-        time.sleep(1)
-
-        # ETAPA 7: Tipo de empresa
-        print("[*] Selecionando tipo de empresa...")
-        try:
-            dropdown = driver.find_element(By.CSS_SELECTOR, "select")
-            select = Select(dropdown)
-            select.select_by_visible_text("MEI - Empresário individual")
-        except:
-            dropdown = wait.until(
-                EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Escolha Tipo de Empresa')]"))
-            )
-            dropdown.click()
-            time.sleep(1)
-            opcao = driver.find_element(By.XPATH, "//*[contains(text(), 'MEI - Empresário individual')]")
-            opcao.click()
-        time.sleep(1)
-
-        # ETAPA 8: Avancar
-        clicar_avancar(driver)
-        time.sleep(2)
-
-        # ETAPA 9: Faixas etarias
-        print("[*] Preenchendo faixas etarias...")
-        campos_faixa = driver.find_elements(By.CSS_SELECTOR, "input[placeholder='0']")
-        for campo in campos_faixa[:10]:
-            try:
-                campo.clear()
-                campo.send_keys("1")
-            except:
-                pass
-        time.sleep(1)
-
-        # ETAPA 10: Avancar
-        clicar_avancar(driver)
-        time.sleep(2)
-
-        # ETAPA 11: Add Produtos
-        print("[*] Adicionando produtos...")
-        try:
-            botao_add = wait.until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Add Produtos')]"))
-            )
-            botao_add.click()
-            time.sleep(2)
-        except:
-            pass
-
-        # ETAPA 12: Sequencia dentro do MODAL
-        # O modal tem 4 etapas sequenciais:
-        # 1. Escolher Operadora: Hapvida, Hapvida - Affix, Hapvida - CORPe
-        # 2. Escolher Tabela: Hapvida [Cidade] + Odonto, Hapvida [Cidade] SEM Odonto
-        # 3. Escolher Planos: Ambulatorial, Nosso Plano, Nosso Medico
-        # 4. Escolha: Sem acomodacao / Com coparticipacao, Sem acomodacao / Com Coparticipacao Parcial
-        print("[*] Configurando opcoes no modal...")
-
-        # 12.1 - Clicar em "Hapvida" (operadora - primeira opcao no modal)
-        print("[*] 12.1 - Clicando em Hapvida (operadora)...")
-        try:
-            # Aguarda o modal carregar e procura pelo texto "Hapvida" que NAO contem outros textos
-            time.sleep(1)
-            # Procura especificamente pelo texto "Hapvida" sem "Affix" ou "CORPe"
-            operadoras = driver.find_elements(By.XPATH, "//*[text()='Hapvida']")
-            for op in operadoras:
-                try:
-                    if op.is_displayed():
-                        driver.execute_script("arguments[0].click();", op)
-                        print("[*] Clicou em Hapvida (operadora)")
-                        break
-                except:
-                    continue
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"[AVISO] Nao encontrou operadora Hapvida: {e}")
-
-        # 12.2 - Clicar em "Hapvida [Cidade] + Odonto" (tabela com odonto)
-        print(f"[*] 12.2 - Selecionando tabela + Odonto...")
-        try:
-            # Procura pelo texto que contem "+ Odonto" (com odonto incluso)
-            tabelas = driver.find_elements(By.XPATH, "//*[contains(text(), '+ Odonto') and not(contains(text(), 'SEM'))]")
-            for tab in tabelas:
-                try:
-                    if tab.is_displayed():
-                        driver.execute_script("arguments[0].click();", tab)
-                        print("[*] Clicou na tabela + Odonto")
-                        break
-                except:
-                    continue
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"[AVISO] Nao encontrou tabela + Odonto: {e}")
-
-        # 12.3 - Clicar em "Ambulatorial" (tipo de plano)
-        print("[*] 12.3 - Selecionando Ambulatorial...")
-        try:
-            # Procura pelo texto "Ambulatorial"
-            planos = driver.find_elements(By.XPATH, "//*[text()='Ambulatorial']")
-            for plano in planos:
-                try:
-                    if plano.is_displayed():
-                        driver.execute_script("arguments[0].click();", plano)
-                        print("[*] Clicou em Ambulatorial")
-                        break
-                except:
-                    continue
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"[AVISO] Nao encontrou Ambulatorial: {e}")
-
-        # 12.4 - Clicar em "Sem acomodacao / Com coparticipacao" (opcao de coparticipacao)
-        print("[*] 12.4 - Selecionando Sem acomodacao / Com coparticipacao...")
-        try:
-            # Procura pelo texto exato (sem "Parcial")
-            opcoes = driver.find_elements(By.XPATH, "//*[contains(text(), 'Sem acomodação / Com coparticipação') and not(contains(text(), 'Parcial'))]")
-            for opc in opcoes:
-                try:
-                    if opc.is_displayed():
-                        driver.execute_script("arguments[0].click();", opc)
-                        print("[*] Clicou em Sem acomodacao / Com coparticipacao")
-                        break
-                except:
-                    continue
-            time.sleep(1.5)
-        except Exception as e:
-            print(f"[AVISO] Nao encontrou opcao coparticipacao: {e}")
-
-        time.sleep(2)
-
-        # ETAPA 13: Fechar o modal clicando no X vermelho
-        print("[*] Fechando modal...")
-        try:
-            # Procura o botao X vermelho do modal (geralmente tem classe close ou icone X)
-            botoes_fechar = driver.find_elements(By.CSS_SELECTOR, "[class*='bubble-element'][class*='clickable-element']")
-            for btn in botoes_fechar:
-                try:
-                    # Procura por elemento com background vermelho ou icone X
-                    style = btn.get_attribute("style") or ""
-                    classe = btn.get_attribute("class") or ""
-                    if btn.is_displayed() and ("close" in classe.lower() or "x" in btn.text.lower()):
-                        driver.execute_script("arguments[0].click();", btn)
-                        print("[*] Modal fechado via botao X")
-                        break
-                except:
-                    continue
-        except:
-            pass
-
-        # Tenta fechar clicando fora do modal ou no X vermelho visivel
-        try:
-            # Busca pelo X vermelho especifico do site (svg ou icone)
-            x_btn = driver.find_element(By.XPATH, "//div[contains(@style, 'background') and contains(@style, 'rgb(231, 76, 60)')]")
-            driver.execute_script("arguments[0].click();", x_btn)
-            print("[*] Modal fechado via X vermelho")
-        except:
-            pass
-
-        time.sleep(1)
-
-        # ETAPA 14: Extrair valores
-        print("[*] Extraindo valores...")
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(1)
-
-        valores = extrair_valores(driver)
-
-        print(f"[OK] Cotacao concluida para {cidade}")
-        return {
-            "cidade": cidade,
-            "sucesso": True,
-            "valores": valores
-        }
-
-    except Exception as e:
-        print(f"[ERRO] Erro na cotacao de {cidade}: {str(e)}")
-        return {
-            "cidade": cidade,
-            "sucesso": False,
-            "erro": str(e)
-        }
+        driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+    except:
+        pass
 
 
 def clicar_avancar(driver):
     """Clica no botao Avancar visivel."""
-    # Primeiro fecha popups
     fechar_popups(driver)
-
     botoes = driver.find_elements(By.XPATH, "//button[contains(., 'Avançar')]")
     for botao in botoes:
         try:
             if botao.is_displayed() and botao.is_enabled():
-                if clicar_elemento_seguro(driver, botao):
-                    return True
+                driver.execute_script("arguments[0].click();", botao)
+                return True
         except:
             continue
     return False
 
 
-def voltar_para_cidade(driver):
-    """Volta para a tela de selecao de cidade clicando em Voltar 2 vezes."""
-    wait = WebDriverWait(driver, 10)
+def extrair_valores(driver):
+    """Extrai valores da tabela de cotacao via posicionamento DOM."""
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    time.sleep(1)
+    driver.execute_script("window.scrollTo(0, 300);")
+    time.sleep(1)
 
-    # Fecha qualquer modal aberto primeiro
+    resultado = []
+    try:
+        items = driver.execute_script("""
+            var all = document.querySelectorAll('*');
+            var faixas = [];
+            var valores_de = [];
+
+            for (var el of all) {
+                var t = (el.innerText || '').trim();
+                if (!t || t.length > 20) continue;
+                var rect = el.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) continue;
+                if (rect.y < 0 || rect.y > 2000) continue;
+
+                if (/^\\d+ a \\d+ anos$|^59 anos ou mais$/.test(t)) {
+                    faixas.push({text: t, y: Math.round(rect.y), x: Math.round(rect.x), w: Math.round(rect.width)});
+                }
+                if (/^\\d{2,3},\\d{2}$/.test(t)) {
+                    valores_de.push({text: t, y: Math.round(rect.y), x: Math.round(rect.x)});
+                }
+            }
+
+            var faixas_by_y = {};
+            for (var f of faixas) {
+                if (!faixas_by_y[f.y] || f.w < faixas_by_y[f.y].w) {
+                    faixas_by_y[f.y] = f;
+                }
+            }
+
+            var valores_by_y = {};
+            for (var v of valores_de) {
+                if (!valores_by_y[v.y] || v.x < valores_by_y[v.y].x) {
+                    valores_by_y[v.y] = v;
+                }
+            }
+
+            var resultado = [];
+            var faixas_keys = Object.keys(faixas_by_y).map(Number).sort((a,b) => a-b);
+            for (var fy of faixas_keys) {
+                var faixa = faixas_by_y[fy];
+                var melhor_v = null;
+                var melhor_dist = 999;
+                for (var vy in valores_by_y) {
+                    var dist = Math.abs(fy - parseInt(vy));
+                    if (dist <= 8 && dist < melhor_dist) {
+                        melhor_dist = dist;
+                        melhor_v = valores_by_y[vy];
+                    }
+                }
+                if (melhor_v) {
+                    resultado.push({faixa: faixa.text, valor: melhor_v.text});
+                }
+            }
+            return resultado;
+        """)
+
+        if items and len(items) > 0:
+            faixa_nomes = {
+                "59 anos ou...": "59 anos ou mais",
+                "59 anos ou mais": "59 anos ou mais",
+            }
+            vistos = set()
+            for item in items:
+                nome = faixa_nomes.get(item["faixa"], item["faixa"])
+                if nome not in vistos:
+                    vistos.add(nome)
+                    resultado.append({
+                        "faixa_etaria": nome,
+                        "valor": f"R$ {item['valor']}"
+                    })
+    except Exception as e:
+        print(f"[AVISO] Extracao DOM falhou: {e}")
+
+    return resultado
+
+
+# ============================================
+# SELECAO DE PRODUTOS NO MODAL (compartilhado)
+# ============================================
+def selecionar_produtos_modal(driver, wait, tipo="pme"):
+    """Seleciona produtos no modal do Bubble.io. Funciona para PME e PF."""
+    # Add Produtos
+    try:
+        botao_add = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Add Produtos')]")))
+        botao_add.click()
+        time.sleep(2)
+    except:
+        pass
+
+    print("[*] Selecionando produtos no modal...")
+    time.sleep(1)
+
+    # Etapa 1: Escolher Operadora - primeira opcao visivel
+    operadora_info = driver.execute_script("""
+        var header = null;
+        var all = document.querySelectorAll('*');
+        for (var el of all) {
+            var t = (el.innerText || '').trim();
+            if (t === 'Escolher Operadora:' || t === 'Escolher Operadora') {
+                header = el.getBoundingClientRect();
+                break;
+            }
+        }
+        var minY = header ? header.y + header.height : 80;
+        var items = [];
+        for (var el of all) {
+            var t = (el.innerText || '').trim();
+            var rect = el.getBoundingClientRect();
+            if (t.length > 2 && t.length < 60
+                && rect.width > 50 && rect.width < 400
+                && rect.height > 15 && rect.height < 60
+                && rect.y > minY && rect.y < minY + 300
+                && rect.x < 400 && el.offsetParent
+                && !t.includes('Escolher') && !t.includes('Add')
+                && !t.includes('Fechar') && !t.includes('Cancelar')) {
+                items.push({x: Math.round(rect.x + rect.width/2), y: Math.round(rect.y + rect.height/2), text: t});
+            }
+        }
+        items.sort(function(a,b) { return a.y - b.y; });
+        return items.length > 0 ? items[0] : null;
+    """)
+    if operadora_info:
+        clique_coords(driver, operadora_info['x'], operadora_info['y'])
+        print(f"[*] Operadora: {operadora_info['text']}")
+    else:
+        print("[AVISO] Nenhuma operadora encontrada no modal!")
+    time.sleep(3)
+
+    # Etapa 2: Escolher Tabela - primeira opcao visivel
+    tabela_info = driver.execute_script("""
+        var header = null;
+        var all = document.querySelectorAll('*');
+        for (var el of all) {
+            var t = (el.innerText || '').trim();
+            if (t === 'Escolher Tabela:' || t === 'Escolher Tabela') {
+                header = el.getBoundingClientRect();
+                break;
+            }
+        }
+        var minY = header ? header.y + header.height : 80;
+        var items = [];
+        for (var el of all) {
+            var t = (el.innerText || '').trim();
+            var rect = el.getBoundingClientRect();
+            if (t.length > 3 && t.length < 100
+                && rect.width > 60 && rect.width < 500
+                && rect.height > 15 && rect.height < 80
+                && rect.y > minY && rect.y < minY + 400
+                && rect.x < 450 && el.offsetParent
+                && !t.includes('Escolher') && !t.includes('Operadora')
+                && !t.includes('Add') && !t.includes('Fechar')) {
+                items.push({x: Math.round(rect.x + rect.width/2), y: Math.round(rect.y + rect.height/2), text: t});
+            }
+        }
+        items.sort(function(a,b) { return a.y - b.y; });
+        return items.length > 0 ? items[0] : null;
+    """)
+    if tabela_info:
+        clique_coords(driver, tabela_info['x'], tabela_info['y'])
+        print(f"[*] Tabela: {tabela_info['text'].strip()[:50]}")
+    else:
+        print("[AVISO] Nenhuma tabela encontrada!")
+    time.sleep(3)
+
+    # Etapa 3: Escolher Plano - primeiro disponivel
+    plano_ok = False
+    for tentativa in range(5):
+        plano_info = driver.execute_script("""
+            var header = null;
+            var all = document.querySelectorAll('*');
+            for (var el of all) {
+                var t = (el.innerText || '').trim();
+                if (t.match(/^Escolher Plano[s]?:?$/)) {
+                    header = el.getBoundingClientRect();
+                    break;
+                }
+            }
+            var minY = header ? header.y + header.height : 100;
+            var items = [];
+            var nomes_plano = ['Ambulatorial', 'Nosso Plano', 'Nosso Médico', 'Pleno',
+                               'Nosso Plano A+H', 'Nosso Plano A+H+O'];
+            for (var el of all) {
+                var t = (el.innerText || '').trim();
+                var rect = el.getBoundingClientRect();
+                if (rect.width > 40 && rect.height > 10 && rect.height < 50
+                    && rect.y >= minY && rect.y < minY + 300
+                    && rect.x < 350 && el.offsetParent) {
+                    for (var np of nomes_plano) {
+                        if (t === np) {
+                            items.push({x: Math.round(rect.x + rect.width/2), y: Math.round(rect.y + rect.height/2), text: t});
+                            break;
+                        }
+                    }
+                }
+            }
+            items.sort(function(a,b) { return a.y - b.y; });
+            return items.length > 0 ? items[0] : null;
+        """)
+        if plano_info:
+            clique_coords(driver, plano_info['x'], plano_info['y'])
+            print(f"[*] Plano: {plano_info['text']}")
+            plano_ok = True
+            break
+        time.sleep(1)
+    if not plano_ok:
+        print("[AVISO] Nenhum plano encontrado!")
+    time.sleep(3)
+
+    # Etapa 4: Escolher modalidade - primeira opcao (mais barata)
+    for tentativa in range(5):
+        modal_info = driver.execute_script("""
+            var all = document.querySelectorAll('*');
+            var found = [];
+            for (var el of all) {
+                var t = (el.innerText || '').trim();
+                var rect = el.getBoundingClientRect();
+                if (t.includes('Total:') && t.includes('por:')
+                    && rect.height > 30 && rect.width > 80
+                    && el.offsetParent && rect.x < 400 && rect.y > 100) {
+                    found.push({x: Math.round(rect.x + rect.width/2), y: Math.round(rect.y + rect.height/2)});
+                }
+            }
+            found.sort(function(a,b) { return a.y - b.y; });
+            return found.length > 0 ? found[0] : null;
+        """)
+        if modal_info:
+            clique_coords(driver, modal_info['x'], modal_info['y'])
+            print("[*] Modalidade selecionada (primeira opcao)")
+            break
+        time.sleep(1)
+    time.sleep(3)
+
+    # Fechar modal
+    print("[*] Fechando modal...")
+    try:
+        clique_coords(driver, 283, 22)
+        time.sleep(1)
+    except:
+        pass
+    try:
+        clique_coords(driver, 800, 400)
+    except:
+        pass
+    time.sleep(2)
+
+    # Ver mais Detalhes da Cotacao
+    print("[*] Abrindo detalhes da cotacao...")
+    try:
+        btn_detalhes = wait.until(EC.element_to_be_clickable(
+            (By.XPATH, "//*[contains(text(), 'Ver mais Detalhes')]")
+        ))
+        driver.execute_script("arguments[0].click();", btn_detalhes)
+        time.sleep(4)
+    except Exception as e:
+        print(f"[AVISO] Nao achou botao detalhes: {e}")
+
+    return extrair_valores(driver)
+
+
+# ============================================
+# COTACAO PME (EMPRESARIAL)
+# ============================================
+def cotar_cidade_pme(driver, cidade):
+    """Cotacao PME ate 29 vidas (empresarial com MEI)."""
+    wait = WebDriverWait(driver, 15)
+
+    driver.get("https://app.cotadorsimplificado.com.br/")
+    time.sleep(2)
     fechar_popups(driver)
     time.sleep(1)
 
-    # Clica em Voltar 2 vezes:
-    # 1a volta: da tela de resultados para faixas etarias
-    # 2a volta: da tela de faixas etarias para cidade
-    for i in range(2):
-        try:
-            botao_voltar = driver.find_element(By.XPATH, "//button[contains(., 'Voltar')]")
-            if botao_voltar.is_displayed():
-                driver.execute_script("arguments[0].click();", botao_voltar)
-                print(f"[*] Clicou em Voltar ({i+1}/2)")
-                time.sleep(1.5)
-        except:
-            break
+    print(f"[*] Cotando {cidade} (PME)...")
+    botao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]")))
+    driver.execute_script("arguments[0].click();", botao)
+    time.sleep(2)
 
+    # PME ate 29 vidas
+    opcao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PME até 29 vidas')]")))
+    driver.execute_script("arguments[0].click();", opcao)
+    time.sleep(2)
+
+    # Nome do cliente
+    campo_nome = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='cliente']")))
+    campo_nome.clear()
+    campo_nome.send_keys("teste")
     time.sleep(1)
-    print("[*] Voltou para tela de cidade")
-    return True
+
+    # Fecha dropdown de clientes
+    try:
+        fechar_btn = driver.find_elements(By.CSS_SELECTOR, "svg[class*='close'], button[class*='close']")
+        for btn in fechar_btn:
+            if btn.is_displayed():
+                driver.execute_script("arguments[0].click();", btn)
+                break
+    except:
+        pass
+    time.sleep(0.5)
+
+    clicar_avancar(driver)
+    time.sleep(2)
+
+    # Selecionar cidade
+    campo_cidade = None
+    inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])")
+    for inp in inputs:
+        try:
+            if inp.is_displayed() and inp.is_enabled():
+                placeholder = inp.get_attribute("placeholder") or ""
+                if " - " in placeholder or "cidade" in placeholder.lower():
+                    campo_cidade = inp
+                    break
+        except:
+            continue
+
+    if not campo_cidade:
+        raise Exception("Campo de cidade nao encontrado")
+
+    driver.execute_script("arguments[0].click();", campo_cidade)
+    time.sleep(0.3)
+    driver.execute_script("arguments[0].select();", campo_cidade)
+    time.sleep(0.2)
+    campo_cidade.send_keys(cidade)
+    time.sleep(2)
+
+    try:
+        opcao_cidade = wait.until(
+            EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
+        )
+        opcao_cidade.click()
+    except:
+        opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
+        driver.execute_script("arguments[0].click();", opcao_cidade)
+    time.sleep(1)
+
+    # MEI
+    mei_selecionado = False
+    try:
+        selects = driver.find_elements(By.CSS_SELECTOR, "select")
+        for sel in selects:
+            if sel.is_displayed():
+                select = Select(sel)
+                for option in select.options:
+                    if "MEI" in option.text:
+                        select.select_by_visible_text(option.text)
+                        mei_selecionado = True
+                        break
+            if mei_selecionado:
+                break
+    except:
+        pass
+    if not mei_selecionado:
+        try:
+            driver.execute_script("""
+                var selects = document.querySelectorAll('select');
+                for (var s of selects) {
+                    for (var o of s.options) {
+                        if (o.text.includes('MEI')) {
+                            s.value = o.value;
+                            s.dispatchEvent(new Event('change', {bubbles: true}));
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            """)
+        except:
+            pass
+    time.sleep(1)
+
+    clicar_avancar(driver)
+    time.sleep(2)
+
+    # Faixas etarias: 1 em cada
+    campos_faixa = driver.find_elements(By.CSS_SELECTOR, "input[placeholder='0']")
+    for campo in campos_faixa[:10]:
+        try:
+            campo.clear()
+            campo.send_keys("1")
+        except:
+            pass
+    time.sleep(1)
+
+    clicar_avancar(driver)
+    time.sleep(2)
+
+    return selecionar_produtos_modal(driver, wait, tipo="pme")
 
 
-def cotar_proxima_cidade(cidade):
-    """Cota uma cidade quando ja esta na tela de selecao de cidade."""
-    global driver_global
-
-    driver = driver_global
+# ============================================
+# COTACAO PF / COLETIVOS (INDIVIDUAL)
+# ============================================
+def cotar_cidade_pf(driver, cidade):
+    """Cotacao PF/Coletivos (individual - sem tipo empresa)."""
     wait = WebDriverWait(driver, 15)
 
+    driver.get("https://app.cotadorsimplificado.com.br/")
+    time.sleep(2)
+    fechar_popups(driver)
+    time.sleep(1)
+
+    print(f"[*] Cotando {cidade} (PF/Coletivos)...")
+    botao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]")))
+    driver.execute_script("arguments[0].click();", botao)
+    time.sleep(2)
+
+    # PF / Coletivos
+    opcao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PF / Coletivos')]")))
+    driver.execute_script("arguments[0].click();", opcao)
+    time.sleep(2)
+
+    # Nome do cliente
+    campo_nome = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='cliente']")))
+    campo_nome.clear()
+    campo_nome.send_keys("teste")
+    time.sleep(1)
+
+    # Fecha dropdown de clientes
     try:
-        # Fecha popups
-        fechar_popups(driver)
-        time.sleep(0.5)
+        fechar_btn = driver.find_elements(By.CSS_SELECTOR, "svg[class*='close'], button[class*='close']")
+        for btn in fechar_btn:
+            if btn.is_displayed():
+                driver.execute_script("arguments[0].click();", btn)
+                break
+    except:
+        pass
+    time.sleep(0.5)
 
-        # Selecionar cidade
-        print(f"[*] Selecionando cidade: {cidade}...")
+    clicar_avancar(driver)
+    time.sleep(2)
 
-        # Encontra o campo de cidade
-        campo_cidade = None
-        inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])")
-        for inp in inputs:
-            try:
-                if inp.is_displayed() and inp.is_enabled():
-                    placeholder = inp.get_attribute("placeholder") or ""
-                    if " - " in placeholder or "cidade" in placeholder.lower():
-                        campo_cidade = inp
-                        break
-            except:
-                continue
-
-        if campo_cidade:
-            driver.execute_script("arguments[0].scrollIntoView(true);", campo_cidade)
-            time.sleep(0.5)
-            driver.execute_script("arguments[0].click();", campo_cidade)
-            time.sleep(0.3)
-            driver.execute_script("arguments[0].select();", campo_cidade)
-            time.sleep(0.2)
-            campo_cidade.send_keys(cidade)
-        else:
-            raise Exception("Campo de cidade nao encontrado")
-
-        time.sleep(2)
-
-        # Clica na opcao do dropdown
+    # Selecionar cidade (sem tipo empresa - vai direto)
+    campo_cidade = None
+    inputs = driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])")
+    for inp in inputs:
         try:
-            opcao_cidade = wait.until(
-                EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
-            )
-            opcao_cidade.click()
+            if inp.is_displayed() and inp.is_enabled():
+                placeholder = inp.get_attribute("placeholder") or ""
+                if " - " in placeholder or "cidade" in placeholder.lower():
+                    campo_cidade = inp
+                    break
         except:
-            try:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
-                opcao_cidade.click()
-            except:
-                opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}')]")
-                driver.execute_script("arguments[0].click();", opcao_cidade)
-        time.sleep(1)
+            continue
 
-        # Avancar
-        clicar_avancar(driver)
-        time.sleep(2)
+    if not campo_cidade:
+        raise Exception("Campo de cidade nao encontrado")
 
-        # Avancar novamente (faixas etarias ja estao preenchidas)
-        clicar_avancar(driver)
-        time.sleep(2)
-
-        # Add Produtos
-        print("[*] Adicionando produtos...")
-        try:
-            botao_add = wait.until(
-                EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Add Produtos')]"))
-            )
-            botao_add.click()
-            time.sleep(2)
-        except:
-            pass
-
-        # Sequencia do modal
-        print("[*] Configurando opcoes no modal...")
-
-        # Hapvida
-        time.sleep(1)
-        operadoras = driver.find_elements(By.XPATH, "//*[text()='Hapvida']")
-        for op in operadoras:
-            try:
-                if op.is_displayed():
-                    driver.execute_script("arguments[0].click();", op)
-                    break
-            except:
-                continue
-        time.sleep(1.5)
-
-        # Tabela - Clica na PRIMEIRA opcao que aparece apos "Escolher Tabela:"
-        # (o nome varia: "Hapvida Recife + Odonto", "Hapvida Fortaleza", etc)
-        print("[*] Selecionando primeira tabela disponivel...")
-        clicou_tabela = False
-
-        # Metodo 1: Procura por elemento que contem "Hapvida" e a cidade ou "2 a 29"
-        tabelas = driver.find_elements(By.XPATH, "//*[contains(text(), 'Hapvida') and contains(text(), '2 a 29')]")
-        for tab in tabelas:
-            try:
-                texto = tab.text or ""
-                # Ignora se tiver "SEM" (sem odonto) - queremos a primeira opcao com odonto se houver
-                if tab.is_displayed() and "SEM" not in texto.upper():
-                    driver.execute_script("arguments[0].click();", tab)
-                    print(f"[*] Clicou na tabela: {texto}")
-                    clicou_tabela = True
-                    break
-            except:
-                continue
-
-        # Metodo 2: Se nao encontrou, clica na primeira opcao que tiver "2 a 29"
-        if not clicou_tabela:
-            tabelas2 = driver.find_elements(By.XPATH, "//*[contains(text(), '2 a 29')]")
-            for tab in tabelas2:
-                try:
-                    if tab.is_displayed():
-                        driver.execute_script("arguments[0].click();", tab)
-                        print(f"[*] Clicou na tabela (metodo 2): {tab.text}")
-                        clicou_tabela = True
-                        break
-                except:
-                    continue
-
-        # Metodo 3: Clica em qualquer elemento logo apos "Escolher Tabela:"
-        if not clicou_tabela:
-            try:
-                primeira_tabela = driver.find_element(By.XPATH, "//div[contains(text(), 'Escolher Tabela:')]/following-sibling::div[1]")
-                driver.execute_script("arguments[0].click();", primeira_tabela)
-                print("[*] Clicou na primeira tabela (metodo 3)")
-            except:
-                pass
-
-        time.sleep(1.5)
-
-        # Ambulatorial
-        planos = driver.find_elements(By.XPATH, "//*[text()='Ambulatorial']")
-        for plano in planos:
-            try:
-                if plano.is_displayed():
-                    driver.execute_script("arguments[0].click();", plano)
-                    break
-            except:
-                continue
-        time.sleep(1.5)
-
-        # Sem acomodacao / Com coparticipacao
-        opcoes = driver.find_elements(By.XPATH, "//*[contains(text(), 'Sem acomodação / Com coparticipação') and not(contains(text(), 'Parcial'))]")
-        for opc in opcoes:
-            try:
-                if opc.is_displayed():
-                    driver.execute_script("arguments[0].click();", opc)
-                    break
-            except:
-                continue
-        time.sleep(2)
-
-        # Fechar modal
-        try:
-            x_btn = driver.find_element(By.XPATH, "//div[contains(@style, 'background') and contains(@style, 'rgb(231, 76, 60)')]")
-            driver.execute_script("arguments[0].click();", x_btn)
-        except:
-            pass
-        time.sleep(1)
-
-        # Extrair valores
-        print("[*] Extraindo valores...")
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(1)
-
-        valores = extrair_valores(driver)
-
-        # Verifica se JSON esta vazio - se sim, tenta clicar nas opcoes novamente
-        if not valores or len(valores) == 0:
-            print("[AVISO] JSON vazio! Tentando selecionar opcoes novamente...")
-            time.sleep(1)
-
-            # Tenta clicar no Add Produtos novamente
-            try:
-                botao_add = driver.find_element(By.XPATH, "//button[contains(., 'Add Produtos')]")
-                if botao_add.is_displayed():
-                    driver.execute_script("arguments[0].click();", botao_add)
-                    time.sleep(2)
-
-                    # Refaz a sequencia do modal
-                    # Hapvida
-                    operadoras = driver.find_elements(By.XPATH, "//*[text()='Hapvida']")
-                    for op in operadoras:
-                        try:
-                            if op.is_displayed():
-                                driver.execute_script("arguments[0].click();", op)
-                                break
-                        except:
-                            continue
-                    time.sleep(1.5)
-
-                    # Primeira tabela
-                    tabelas = driver.find_elements(By.XPATH, "//*[contains(text(), '2 a 29')]")
-                    for tab in tabelas:
-                        try:
-                            if tab.is_displayed() and "SEM" not in (tab.text or "").upper():
-                                driver.execute_script("arguments[0].click();", tab)
-                                break
-                        except:
-                            continue
-                    time.sleep(1.5)
-
-                    # Ambulatorial
-                    planos = driver.find_elements(By.XPATH, "//*[text()='Ambulatorial']")
-                    for plano in planos:
-                        try:
-                            if plano.is_displayed():
-                                driver.execute_script("arguments[0].click();", plano)
-                                break
-                        except:
-                            continue
-                    time.sleep(1.5)
-
-                    # Coparticipacao
-                    opcoes = driver.find_elements(By.XPATH, "//*[contains(text(), 'Sem acomodação / Com coparticipação') and not(contains(text(), 'Parcial'))]")
-                    for opc in opcoes:
-                        try:
-                            if opc.is_displayed():
-                                driver.execute_script("arguments[0].click();", opc)
-                                break
-                        except:
-                            continue
-                    time.sleep(2)
-
-                    # Tenta extrair novamente
-                    valores = extrair_valores(driver)
-            except:
-                pass
-
-        print(f"[OK] Cotacao concluida para {cidade}")
-        return {
-            "cidade": cidade,
-            "sucesso": True if valores and len(valores) > 0 else False,
-            "valores": valores,
-            "erro": "Nenhum valor encontrado" if not valores or len(valores) == 0 else None
-        }
-
-    except Exception as e:
-        print(f"[ERRO] Erro na cotacao de {cidade}: {str(e)}")
-        return {
-            "cidade": cidade,
-            "sucesso": False,
-            "erro": str(e)
-        }
-
-
-def extrair_valores(driver):
-    """Extrai os valores da tabela de precos."""
-    faixas = [
-        "0 a 18 anos",
-        "19 a 23 anos",
-        "24 a 28 anos",
-        "29 a 33 anos",
-        "34 a 38 anos",
-        "39 a 43 anos",
-        "44 a 48 anos",
-        "49 a 53 anos",
-        "54 a 58 anos",
-        "59 anos ou mais"
-    ]
-
-    valores = []
+    driver.execute_script("arguments[0].click();", campo_cidade)
+    time.sleep(0.3)
+    driver.execute_script("arguments[0].select();", campo_cidade)
+    time.sleep(0.2)
+    campo_cidade.send_keys(cidade)
+    time.sleep(2)
 
     try:
-        # Rola a pagina para garantir que os valores estejam visiveis
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(1)
+        opcao_cidade = wait.until(
+            EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
+        )
+        opcao_cidade.click()
+    except:
+        opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
+        driver.execute_script("arguments[0].click();", opcao_cidade)
+    time.sleep(1)
 
-        # Metodo 1: Busca pela coluna "Por:" que contem os valores
-        # Os valores aparecem apos o texto "Por:" na interface
-        elementos = driver.find_elements(By.XPATH, "//*[contains(text(), 'Por:')]/following-sibling::*")
+    # PF nao tem tipo empresa - clica direto em Avancar
+    clicar_avancar(driver)
+    time.sleep(2)
 
-        valores_encontrados = []
+    # Faixas etarias: 1 em cada
+    campos_faixa = driver.find_elements(By.CSS_SELECTOR, "input[placeholder='0']")
+    for campo in campos_faixa[:10]:
+        try:
+            campo.clear()
+            campo.send_keys("1")
+        except:
+            pass
+    time.sleep(1)
 
-        # Metodo 2: Busca todos elementos que contem valores no formato ###,##
-        todos_elementos = driver.find_elements(By.XPATH, "//*")
-        for elem in todos_elementos:
-            try:
-                texto = elem.text.strip()
-                # Verifica se e um valor monetario (formato ###,## sem texto adicional)
-                if texto and ',' in texto:
-                    # Remove pontos de milhar e verifica se e numero
-                    texto_limpo = texto.replace('.', '').replace(',', '.').replace('R$', '').replace(' ', '')
-                    try:
-                        valor_num = float(texto_limpo)
-                        # Valores de plano geralmente estao entre 50 e 2000
-                        if 50 < valor_num < 2000:
-                            valores_encontrados.append(texto)
-                    except:
-                        pass
-            except:
-                pass
+    clicar_avancar(driver)
+    time.sleep(2)
 
-        # Remove duplicatas mantendo a ordem
-        valores_unicos = []
-        for v in valores_encontrados:
-            if v not in valores_unicos:
-                valores_unicos.append(v)
+    return selecionar_produtos_modal(driver, wait, tipo="pf")
 
-        # Pega os primeiros 10 valores (as 10 faixas etarias)
-        for i, valor in enumerate(valores_unicos[:10]):
-            if i < len(faixas):
-                valor_formatado = valor if valor.startswith("R$") else f"R$ {valor}"
-                valores.append({
-                    "faixa_etaria": faixas[i],
-                    "valor": valor_formatado
-                })
 
-        print(f"[*] Encontrados {len(valores)} valores de faixas etarias")
+# ============================================
+# COMPARACAO PME vs PF
+# ============================================
+def valor_para_float(valor_str):
+    """Converte 'R$ 123,45' para 123.45"""
+    return float(valor_str.replace("R$ ", "").replace(".", "").replace(",", "."))
 
-    except Exception as e:
-        print(f"[ERRO] Erro ao extrair valores: {str(e)}")
 
-    return valores
+def comparar_e_melhor(pme_valores, pf_valores):
+    """Compara PME vs PF e retorna lista simples com o valor mais barato por faixa."""
+    pme_dict = {v["faixa_etaria"]: v["valor"] for v in pme_valores}
+    pf_dict = {v["faixa_etaria"]: v["valor"] for v in pf_valores}
+
+    resultado = []
+    total_pme = 0
+    total_pf = 0
+
+    for faixa in FAIXAS:
+        val_pme = pme_dict.get(faixa)
+        val_pf = pf_dict.get(faixa)
+
+        if val_pme and val_pf:
+            num_pme = valor_para_float(val_pme)
+            num_pf = valor_para_float(val_pf)
+            total_pme += num_pme
+            total_pf += num_pf
+            melhor_valor = val_pf if num_pf < num_pme else val_pme
+            resultado.append({"faixa_etaria": faixa, "valor": melhor_valor})
+        elif val_pme:
+            resultado.append({"faixa_etaria": faixa, "valor": val_pme})
+        elif val_pf:
+            resultado.append({"faixa_etaria": faixa, "valor": val_pf})
+
+    melhor_tipo = "PF/Coletivos" if total_pf < total_pme else "PME"
+    print(f"\n[RESULTADO] Melhor opcao global: {melhor_tipo}")
+    print(f"  PME total: R$ {total_pme:,.2f} | PF total: R$ {total_pf:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+    return resultado
 
 
 # ============================================
@@ -943,7 +748,7 @@ def index():
 @app.route('/cotar', methods=['POST'])
 def cotar():
     """Rota para executar cotacao."""
-    global primeira_cotacao, driver_global
+    global driver_global, logado
 
     try:
         dados = request.get_json()
@@ -952,38 +757,56 @@ def cotar():
         if not cidades:
             return jsonify({"erro": "Nenhuma cidade informada"}), 400
 
+        # Garante login
+        if not logado or driver_global is None:
+            if not fazer_login():
+                return jsonify([{"cidade": "N/A", "sucesso": False, "erro": "Falha no login"}]), 500
+
+        driver = driver_global
         resultados = []
 
         for i, cidade in enumerate(cidades):
             cidade = cidade.strip()
-            if cidade:
-                print(f"\n{'='*50}")
-                print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
-                print(f"{'='*50}")
+            if not cidade:
+                continue
 
-                try:
-                    if i == 0 or primeira_cotacao or driver_global is None:
-                        # Primeira cidade: faz o fluxo completo
-                        resultado = cotar_cidade(cidade)
-                        primeira_cotacao = False
-                    else:
-                        # Demais cidades: volta para tela de cidade e cota
-                        voltar_para_cidade(driver_global)
-                        resultado = cotar_proxima_cidade(cidade)
-                except Exception as e:
-                    print(f"[ERRO] Excecao ao cotar {cidade}: {str(e)}")
-                    resultado = {
-                        "cidade": cidade,
-                        "sucesso": False,
-                        "erro": str(e)
-                    }
-                    primeira_cotacao = True
+            print(f"\n{'='*50}")
+            print(f"[*] Cotando cidade {i+1}/{len(cidades)}: {cidade}")
+            print(f"{'='*50}")
 
-                resultados.append(resultado)
+            try:
+                # Cota PME
+                pme = cotar_cidade_pme(driver, cidade)
+                print(f"[OK] {cidade} PME: {len(pme)} faixas")
 
-                # Se deu erro, tenta o fluxo completo na proxima
-                if not resultado.get("sucesso"):
-                    primeira_cotacao = True
+                # Cota PF
+                pf = cotar_cidade_pf(driver, cidade)
+                print(f"[OK] {cidade} PF: {len(pf)} faixas")
+
+                # Compara e pega o melhor
+                if pme and pf:
+                    valores = comparar_e_melhor(pme, pf)
+                elif pme:
+                    valores = pme
+                elif pf:
+                    valores = pf
+                else:
+                    valores = []
+
+                resultados.append({
+                    "cidade": cidade,
+                    "sucesso": len(valores) > 0,
+                    "valores": valores,
+                    "erro": "Nenhum valor encontrado" if not valores else None
+                })
+
+            except Exception as e:
+                print(f"[ERRO] Excecao ao cotar {cidade}: {str(e)}")
+                resultados.append({
+                    "cidade": cidade,
+                    "sucesso": False,
+                    "erro": str(e)
+                })
 
         return jsonify(resultados)
 
@@ -1025,7 +848,6 @@ def fechar():
 # ============================================
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get('PORT', 5000))
 
     print("\n" + "="*60)
@@ -1034,7 +856,7 @@ if __name__ == '__main__':
     print(f"\n  Acesse: http://localhost:{port}")
     print("\n  Endpoints:")
     print("    GET  /         - Pagina inicial")
-    print("    POST /cotar    - Executar cotacao")
+    print("    POST /cotar    - Executar cotacao (PME vs PF)")
     print("    POST /login    - Fazer login")
     print("    GET  /status   - Verificar status")
     print("    GET  /fechar   - Fechar navegador")
