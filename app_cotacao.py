@@ -510,21 +510,44 @@ def cotar_cidade_pme(driver, cidade):
     if not campo_cidade:
         raise Exception("Campo de cidade nao encontrado")
 
+    cidade_normalizada = cidade.strip().title()
     driver.execute_script("arguments[0].click();", campo_cidade)
     time.sleep(0.3)
     driver.execute_script("arguments[0].select();", campo_cidade)
     time.sleep(0.2)
-    campo_cidade.send_keys(cidade)
-    time.sleep(2)
+    campo_cidade.send_keys(cidade_normalizada)
+    time.sleep(3)
 
+    # Tenta encontrar a cidade no dropdown com varias estrategias
+    opcao_cidade = None
+    # Estrategia 1: busca exata com " - " ou "/"
     try:
-        opcao_cidade = wait.until(
-            EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
+        opcao_cidade = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH,
+                f"//*[contains(text(), '{cidade_normalizada} -') or contains(text(), '{cidade_normalizada}/')]"))
         )
-        opcao_cidade.click()
     except:
-        opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
-        driver.execute_script("arguments[0].click();", opcao_cidade)
+        pass
+    # Estrategia 2: busca case-insensitive via translate()
+    if not opcao_cidade:
+        try:
+            lower_cidade = cidade_normalizada.lower()
+            xpath_ci = (f"//*[contains(translate(text(),"
+                        f"'ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÉÊÍÓÔÕÚÇ',"
+                        f"'abcdefghijklmnopqrstuvwxyzàáâãéêíóôõúç'),"
+                        f"'{lower_cidade}') and contains(text(), '-')]")
+            opcao_cidade = driver.find_element(By.XPATH, xpath_ci)
+        except:
+            pass
+    # Estrategia 3: busca parcial pelo nome da cidade
+    if not opcao_cidade:
+        try:
+            opcao_cidade = driver.find_element(By.XPATH,
+                f"//*[contains(text(), '{cidade_normalizada}') and contains(text(), '-')]")
+        except:
+            raise Exception(f"Cidade '{cidade_normalizada}' nao encontrada no dropdown")
+
+    driver.execute_script("arguments[0].click();", opcao_cidade)
     time.sleep(1)
 
     # MEI
@@ -639,21 +662,44 @@ def cotar_cidade_pf(driver, cidade):
     if not campo_cidade:
         raise Exception("Campo de cidade nao encontrado")
 
+    cidade_normalizada = cidade.strip().title()
     driver.execute_script("arguments[0].click();", campo_cidade)
     time.sleep(0.3)
     driver.execute_script("arguments[0].select();", campo_cidade)
     time.sleep(0.2)
-    campo_cidade.send_keys(cidade)
-    time.sleep(2)
+    campo_cidade.send_keys(cidade_normalizada)
+    time.sleep(3)
 
+    # Tenta encontrar a cidade no dropdown com varias estrategias
+    opcao_cidade = None
+    # Estrategia 1: busca exata com " - " ou "/"
     try:
-        opcao_cidade = wait.until(
-            EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]"))
+        opcao_cidade = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH,
+                f"//*[contains(text(), '{cidade_normalizada} -') or contains(text(), '{cidade_normalizada}/')]"))
         )
-        opcao_cidade.click()
     except:
-        opcao_cidade = driver.find_element(By.XPATH, f"//*[contains(text(), '{cidade}') and contains(text(), '-')]")
-        driver.execute_script("arguments[0].click();", opcao_cidade)
+        pass
+    # Estrategia 2: busca case-insensitive via translate()
+    if not opcao_cidade:
+        try:
+            lower_cidade = cidade_normalizada.lower()
+            xpath_ci = (f"//*[contains(translate(text(),"
+                        f"'ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÉÊÍÓÔÕÚÇ',"
+                        f"'abcdefghijklmnopqrstuvwxyzàáâãéêíóôõúç'),"
+                        f"'{lower_cidade}') and contains(text(), '-')]")
+            opcao_cidade = driver.find_element(By.XPATH, xpath_ci)
+        except:
+            pass
+    # Estrategia 3: busca parcial pelo nome da cidade
+    if not opcao_cidade:
+        try:
+            opcao_cidade = driver.find_element(By.XPATH,
+                f"//*[contains(text(), '{cidade_normalizada}') and contains(text(), '-')]")
+        except:
+            raise Exception(f"Cidade '{cidade_normalizada}' nao encontrada no dropdown")
+
+    driver.execute_script("arguments[0].click();", opcao_cidade)
     time.sleep(1)
 
     # PF nao tem tipo empresa - clica direto em Avancar
