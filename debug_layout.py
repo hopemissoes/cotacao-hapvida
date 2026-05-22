@@ -17,6 +17,7 @@ Uso:
 """
 
 import argparse
+import glob
 import json
 import os
 import shutil
@@ -48,6 +49,20 @@ def reset_output_dir():
     os.makedirs(OUT_DIR, exist_ok=True)
 
 
+def encontrar_chrome_binary():
+    candidatos = [
+        os.environ.get("CHROME_BIN", ""),
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium",
+        "/usr/bin/chromium-browser",
+    ]
+    candidatos += sorted(glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"), reverse=True)
+    for p in candidatos:
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
 def iniciar_navegador():
     chrome_options = Options()
     if not os.environ.get("DEBUG_HEADED"):
@@ -60,9 +75,21 @@ def iniciar_navegador():
     chrome_options.add_argument("--disable-popup-blocking")
     chrome_options.add_argument("--disable-extensions")
 
+    binary = encontrar_chrome_binary()
+    if binary:
+        chrome_options.binary_location = binary
+        log(f"chrome binary: {binary}")
+
+    # Selenium Manager (built-in no Selenium 4.6+) baixa driver compativel
+    try:
+        return webdriver.Chrome(options=chrome_options)
+    except Exception as e:
+        log(f"selenium manager falhou ({e}); tentando fallbacks")
+
     for path in (os.environ.get("CHROMEDRIVER_PATH", ""),
                  "/usr/bin/chromedriver",
-                 "/usr/local/bin/chromedriver"):
+                 "/usr/local/bin/chromedriver",
+                 "/opt/node22/bin/chromedriver"):
         if path and os.path.exists(path):
             try:
                 return webdriver.Chrome(service=Service(path), options=chrome_options)
