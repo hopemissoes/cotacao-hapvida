@@ -3,6 +3,8 @@ __pycache__/
 *.pyo
 .env
 *.log
+debug_output/
+debug_*.png
 app.py
 automacao_cotador.py
 fluxo_cotacao_hapvida.py
