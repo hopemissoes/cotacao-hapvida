@@ -268,7 +268,7 @@ def explorar_fluxo(driver, tipo, cidade):
 
     def selecionar_cidade():
         campo = None
-        for inp in driver.find_elements(By.CSS_SELECTOR, "input[type='text'], input:not([type])"):
+        for inp in driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])"):
             if inp.is_displayed() and inp.is_enabled():
                 ph = (inp.get_attribute("placeholder") or "").lower()
                 if " - " in ph or "cidade" in ph:

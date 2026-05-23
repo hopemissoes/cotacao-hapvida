@@ -181,7 +181,7 @@ def extrair_valores(driver):
                 if (rect.width === 0 || rect.height === 0) continue;
                 if (rect.y < 0 || rect.y > 2000) continue;
 
-                if (/^\\d+ a \\d+ anos$|^59 anos ou mais$/.test(t)) {
+                if (/^\\d+ a \\d+ anos$|^59 anos ou mais$|^59 ou \\+$/.test(t)) {
                     faixas.push({text: t, y: Math.round(rect.y), x: Math.round(rect.x), w: Math.round(rect.width)});
                 }
                 if (/^\\d{2,3},\\d{2}$/.test(t)) {
@@ -227,6 +227,7 @@ def extrair_valores(driver):
             faixa_nomes = {
                 "59 anos ou...": "59 anos ou mais",
                 "59 anos ou mais": "59 anos ou mais",
+                "59 ou +": "59 anos ou mais",
             }
             vistos = set()
             for item in items:
@@ -322,7 +323,8 @@ def selecionar_produtos_modal(driver, wait, tipo="pme"):
         var all = document.querySelectorAll('*');
         for (var el of all) {
             var t = (el.innerText || '').trim();
-            if (t === 'Escolher Tabela:' || t === 'Escolher Tabela') {
+            if (t === 'Escolher Tabela:' || t === 'Escolher Tabela'
+                || t === 'Qual Tabela?' || t === 'Qual Tabela') {
                 header = el.getBoundingClientRect();
                 break;
             }
@@ -338,7 +340,8 @@ def selecionar_produtos_modal(driver, wait, tipo="pme"):
                 && rect.y > minY && rect.y < minY + 400
                 && rect.x < 450 && el.offsetParent
                 && !t.includes('Escolher') && !t.includes('Operadora')
-                && !t.includes('Add') && !t.includes('Fechar')) {
+                && !t.includes('Add') && !t.includes('Fechar')
+                && !t.includes('Qual')) {
                 items.push({x: Math.round(rect.x + rect.width/2), y: Math.round(rect.y + rect.height/2), text: t});
             }
         }
@@ -360,10 +363,10 @@ def selecionar_produtos_modal(driver, wait, tipo="pme"):
         plano_info = driver.execute_script("""
             var header = null;
             var all = document.querySelectorAll('*');
-            // Header pode ser "Escolher Planos:" ou "Escolher Plano:"
+            // Header pode ser "Escolher Plano(s):" (layout antigo) ou "Qual Plano?" (layout novo)
             for (var el of all) {
                 var t = (el.innerText || '').trim();
-                if (t.match(/^Escolher Plano[s]?:?$/)) {
+                if (t.match(/^(Escolher Plano[s]?|Qual Plano)[?:]?$/)) {
                     header = el.getBoundingClientRect();
                     break;
                 }
@@ -469,9 +472,10 @@ def cotar_cidade_pme(driver, cidade):
     driver.execute_script("arguments[0].click();", botao)
     time.sleep(2)
 
-    # PME ate 29 vidas
-    opcao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PME até 29 vidas')]")))
-    driver.execute_script("arguments[0].click();", opcao)
+    # PME ate 29 vidas - layout novo usa card div clicavel (Bubble ignora .click() sintetico)
+    opcao = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, "//div[normalize-space(text())='PME até 29 vidas']")))
+    clique_real(driver, opcao)
     time.sleep(2)
 
     # Nome do cliente
@@ -598,9 +602,10 @@ def cotar_cidade_pf(driver, cidade):
     driver.execute_script("arguments[0].click();", botao)
     time.sleep(2)
 
-    # PF / Coletivos
-    opcao = wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'PF / Coletivos')]")))
-    driver.execute_script("arguments[0].click();", opcao)
+    # PF / Coletivos - layout novo usa card div clicavel (Bubble ignora .click() sintetico)
+    opcao = wait.until(EC.element_to_be_clickable(
+        (By.XPATH, "//div[normalize-space(text())='PF / Coletivos']")))
+    clique_real(driver, opcao)
     time.sleep(2)
 
     # Nome do cliente
