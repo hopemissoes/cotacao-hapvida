@@ -28,7 +28,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 # ============================================
 EMAIL = "jessicamendesbarbosa5@gmail.com"
 SENHA = "amovoced28"
-URL_LOGIN = "https://app.cotadorsimplificado.com.br/login"
+URL_LOGIN = "https://app2.cotadorsimplificado.com.br/login"
 
 FAIXAS = [
     "0 a 18 anos", "19 a 23 anos", "24 a 28 anos",
@@ -459,7 +459,7 @@ def cotar_cidade_pme(driver, cidade):
     """Cotacao PME ate 29 vidas (empresarial com MEI)."""
     wait = WebDriverWait(driver, 15)
 
-    driver.get("https://app.cotadorsimplificado.com.br/")
+    driver.get("https://app2.cotadorsimplificado.com.br/")
     time.sleep(2)
     fechar_popups(driver)
     time.sleep(1)
@@ -588,7 +588,7 @@ def cotar_cidade_pf(driver, cidade):
     """Cotacao PF/Coletivos (individual - sem tipo empresa)."""
     wait = WebDriverWait(driver, 15)
 
-    driver.get("https://app.cotadorsimplificado.com.br/")
+    driver.get("https://app2.cotadorsimplificado.com.br/")
     time.sleep(2)
     fechar_popups(driver)
     time.sleep(1)

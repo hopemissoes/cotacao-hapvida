@@ -10,3 +10,5 @@ app_cotacao_backup.py
 nul
 static/
 DOCUMENTACAO_FLUXO.txt
+debug_output/
+debug_*.png
