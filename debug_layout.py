@@ -239,82 +239,50 @@ def explorar_home(driver):
 
 
 def explorar_fluxo(driver, tipo, cidade):
-    """Tenta avancar pelo fluxo capturando cada tela. Para se quebrar."""
+    """Explora o fluxo do app2 capturando cada tela.
+
+    app2 e SPA limpa (nao Bubble.io): botoes/links/inputs reais.
+    Estrategia: clica 'Nova Cotacao', captura, espera, captura de novo
+    pra ver se algo dinamico carrega. Quando souber a tela seguinte,
+    adicione mais etapas aqui.
+    """
     wait = WebDriverWait(driver, 15)
 
-    tentar(driver, "home_carregada", lambda: (driver.get("https://app2.cotadorsimplificado.com.br/"), time.sleep(4)))
+    tentar(driver, "home_dashboard", lambda: (
+        driver.get("https://app2.cotadorsimplificado.com.br/dashboard"),
+        time.sleep(4)
+    ))
 
-    tentar(driver, "clicou_cotar_hapvida", lambda: driver.execute_script(
-        "arguments[0].click();",
-        wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Cotar Hapvida')]")))))
-
-    label_tipo = "PME até 29 vidas" if tipo == "pme" else "PF / Coletivos"
-    tentar(driver, f"clicou_{tipo}", lambda: driver.execute_script(
-        "arguments[0].click();",
-        wait.until(EC.element_to_be_clickable((By.XPATH, f"//*[contains(text(), '{label_tipo}')]")))))
-
-    def preencher_nome():
-        c = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[placeholder*='cliente']")))
-        c.clear(); c.send_keys("teste"); time.sleep(1)
-    tentar(driver, "preencheu_nome_cliente", preencher_nome)
-
-    def avancar():
-        botoes = driver.find_elements(By.XPATH, "//button[contains(., 'Avançar')]")
-        for b in botoes:
-            if b.is_displayed() and b.is_enabled():
-                driver.execute_script("arguments[0].click();", b); return
-        raise RuntimeError("nenhum botao Avancar visivel")
-    tentar(driver, "avancou_pos_nome", avancar)
-
-    def selecionar_cidade():
-        campo = None
-        for inp in driver.find_elements(By.CSS_SELECTOR, "input[type='input'], input[type='text'], input:not([type])"):
-            if inp.is_displayed() and inp.is_enabled():
-                ph = (inp.get_attribute("placeholder") or "").lower()
-                if " - " in ph or "cidade" in ph:
-                    campo = inp; break
-        if not campo:
-            raise RuntimeError("campo cidade nao encontrado")
-        driver.execute_script("arguments[0].click();", campo)
-        campo.send_keys(cidade); time.sleep(2)
-        opc = wait.until(EC.element_to_be_clickable(
-            (By.XPATH, f"//*[contains(text(), '{cidade} -') or contains(text(), '{cidade}/')]")))
-        opc.click(); time.sleep(1)
-    tentar(driver, f"selecionou_cidade_{cidade}", selecionar_cidade)
-
-    if tipo == "pme":
-        def selecionar_mei():
-            from selenium.webdriver.support.ui import Select
-            for sel in driver.find_elements(By.CSS_SELECTOR, "select"):
-                if sel.is_displayed():
-                    s = Select(sel)
-                    for o in s.options:
-                        if "MEI" in o.text:
-                            s.select_by_visible_text(o.text); return
-            raise RuntimeError("MEI nao encontrado")
-        tentar(driver, "selecionou_mei", selecionar_mei)
-
-    tentar(driver, "avancou_pos_cidade", avancar)
-
-    def preencher_faixas():
-        campos = driver.find_elements(By.CSS_SELECTOR, "input[placeholder='0']")
-        if not campos:
-            raise RuntimeError("nenhum input de faixa encontrado")
-        for c in campos[:10]:
+    def clicar_nova_cotacao():
+        # tenta varios seletores possiveis pro botao "Nova Cotacao"
+        candidatos = [
+            (By.XPATH, "//button[.//p[normalize-space(text())='Nova Cotação']]"),
+            (By.XPATH, "//button[contains(., 'Nova Cotação')]"),
+            (By.XPATH, "//a[contains(., 'Nova Cotação')]"),
+            (By.XPATH, "//*[contains(text(), 'Nova Cotação')]"),
+        ]
+        for by, sel in candidatos:
             try:
-                c.clear(); c.send_keys("1")
+                el = wait.until(EC.element_to_be_clickable((by, sel)))
+                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", el)
+                time.sleep(0.5)
+                el.click()
+                return
             except Exception:
-                pass
-    tentar(driver, "preencheu_faixas_etarias", preencher_faixas)
+                continue
+        raise RuntimeError("botao 'Nova Cotacao' nao encontrado")
 
-    tentar(driver, "avancou_pos_faixas", avancar)
+    tentar(driver, "clicou_nova_cotacao", clicar_nova_cotacao)
 
-    def abrir_modal():
-        b = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Add Produtos')]")))
-        b.click()
+    # Captura snapshots adicionais ao longo de alguns segundos pra pegar
+    # qualquer transicao/modal/spinner que apareca depois do click
+    for i, espera in enumerate([2, 3, 5], start=1):
+        time.sleep(espera)
+        snapshot(driver, f"apos_nova_cotacao_{i}")
+
+    log("== FIM da exploracao app2 - revise debug_output/ e adicione proxima etapa")
     tentar(driver, "abriu_modal_produtos", abrir_modal)
 
-    log("== FIM do fluxo explorado (modal aberto ou erro acima)")
 
 
 def main():
