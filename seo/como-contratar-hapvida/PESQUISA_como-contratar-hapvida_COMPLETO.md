@@ -508,3 +508,113 @@ tabela. Se o usuário preferir eliminar a sobreposição, a alternativa é troca
 Dois shortcodes da tabela por modalidade não foram vistos ao vivo:
 `[belo-horizonte_ind_ambulatorialtotal_0]` e `[belo-horizonte_ade_ambulatorialtotal_0]`.
 Se algum não renderizar, a linha correspondente sai da tabela — linha quebrada não vai ao ar.
+
+---
+
+## 13. ESTÁGIO 4 — AUDITORIAS (23/08/2026) E O REFINO APLICADO
+
+Três agentes independentes, nenhum deles autor do texto. 18 correções aplicadas pelo editor-chefe.
+
+### 13.1 O achado que derrubou o desenho do adendo 12
+
+O Agente 13 levantou, e a conferência ao vivo confirmou: **`[belo-horizonte_emp_ambulatorialtotal]` renderiza um VALOR, não uma tabela.**
+
+Prova, do próprio pillar `/tabela-de-preco-hapvida/` (artigo 19785, campos Rank Math lidos via MCP):
+
+```
+"rank_math_title":       "Tabela de Preços Hapvida [ano_atual] | PROMOÇÃO por [belo-horizonte_emp_ambulatorialtotal]"
+"rank_math_description": "... Valores a partir de [belo-horizonte_emp_ambulatorialtotal]. ..."
+```
+
+Ninguém coloca uma tabela HTML dentro de um meta title. O uso inline nos pillars confirma
+(`"começam em [belo-horizonte_ind_ambulatorialtotal]/mês"`).
+
+**Consequência:** o `RE_SHORTCODE_TABELA` do `checkpoint_preco_primeiro.py` classifica como "tabela
+inteira" um shortcode que é valor pontual. Seguir a trava ao pé da letra colocava um **valor** onde
+deveria estar uma **tabela** — foi exatamente o que aconteceu na primeira versão, e o parágrafo
+acima dele prometia "as três lado a lado". A única família que o regex aceita e que seria tabela de
+verdade é `*_menortabela`, que **não aparece em nenhum artigo publicado lido**.
+
+**Desenho final:** a **tabela por modalidade** (`<table>` real, 3 linhas, shortcodes `_0`) sobe para
+antes do sumário e é a tabela do topo. O shortcode-valor sai. Entra, colado à tabela, o link com a
+âncora que o banco prescreve — *"tabela completa por faixa etária"* → `/tabela-de-preco-hapvida/`.
+
+**Ordem verificada no HTML final:** `<table>` na posição 3.236 · sumário em 6.467 · formulário em
+14.509. Texto visível antes da tabela: **1.061** (teto 1.800). Entre a tabela e o sumário: **312**
+(teto 600).
+
+### 13.2 Estado das travas mecânicas
+
+| Trava | Resultado |
+|---|---|
+| completude (pillar) | ✅ 10 H2 · 22 H3 · 17 FAQ · 4.464 palavras |
+| voz humana `--rigor alto` | ✅ zero 🔴 e zero 🟡 |
+| parágrafos | ✅ 0 acima de 480 |
+| ritmo visual | ✅ 0 seção com ≥5 P seguidos |
+| citabilidade | ✅ 9 na faixa ideal, 1 aceitável, 0 reprovada |
+| verificar | ✅ nenhum dado proibido |
+| on-page | ✅ 7/7 posições |
+| **preço-primeiro** | ❌ **falha só a regra 1**, pelo motivo de 13.1 — ver 13.4 |
+
+### 13.3 As 18 correções aplicadas
+
+**Veracidade (Agente 12):** parágrafo que prometia tabela inexistente · afirmação sobre o que o
+Contrate Online *não* vende (sem fonte) · "caminho mais curto" (sem fonte) · ressalva de
+disponibilidade do portal · **"relatório COMPROVA" não existe** — a ANS emite relatório de
+compatibilidade pelo Guia ANS · **artigo 11 da Lei 9.656/98 não autoriza rescisão** (impõe o ônus da
+prova à operadora; a rescisão por fraude exige processo administrativo na ANS) · "Programa Bebê Hap"
+não confirmado, trocado pela base legal · afirmação de idade suavizada (YMYL) · "o próprio MEI conta
+como uma das 2 vidas" (sem fonte).
+
+**Anti-doorway (Agente 13):** FAQ 8 reproduzia a regra "2 anos / 3 anos + CAFEX" do pillar de
+carências **e havia perdido o link que a versão publicada tinha** — virou bridge + link restaurado ·
+FAQ 4 reproduzia o mecanismo da CPT — encolhida para bridge + link · FAQ 15 ganhou link para o
+pillar de adesão · tabela do topo redesenhada (13.1).
+
+**GEO (Agente 15):** aberturas do H2 de preço e da FAQ reescritas para afirmar em vez de apontar ·
+eliminadas as três referências dêiticas ("no início desta página", "a tabela do topo") · FAQ 11
+(que responde à PAA de preço da SERP) ganhou âncora quantitativa · o prazo de 48h/10 dias úteis
+passou a ter procedência declarada.
+
+**Links quebrados, herdados do artigo publicado:** `/portabilidade-hapvida/` →
+`/portabilidade-para-hapvida/` e `/plano-nosso-plano-hapvida/` → `/nosso-plano-hapvida/`. Os dois
+estão quebrados **na página que está no ar hoje**. Reposto também `/plano-empresarial-hapvida/`.
+
+### 13.4 A trava que fica em aberto — decisão do usuário
+
+`checkpoint_preco_primeiro.py` acusa "nenhuma tabela de preço encontrada". O leitor **vê** uma
+tabela de preço como primeiro conteúdo depois do lead; o script não a reconhece porque procura um
+shortcode de tabela e o artigo usa `<table>` com shortcodes de valor. Três saídas:
+
+1. **Publicar assim e registrar o bug do regex** (recomendada). A intenção da v7 está cumprida.
+2. **Testar `[belo-horizonte_menortabela]`.** Se existir, é tabela de verdade e satisfaz a trava —
+   mas reintroduz a tabela de faixa etária que o banco proíbe reproduzir.
+3. Ajustar o regex da skill para aceitar `<table>` com shortcodes de valor.
+
+### 13.5 Citação em IA — BASELINE MEDIDO (não estimado)
+
+`monitor_citacoes_ia` + `buraco_citacao_ia`, DataForSeo, Brasil/pt, 23/08/2026, custo US$ 0,11:
+
+- **507** respostas de AI Overview citam `tabelaplanos.com.br`.
+- **Citações da URL `/como-contratar-hapvida/`: ZERO.**
+- No tema de contratação, quem é citado é o spoke `/convenio-medico-para-mei/` (5.400, 390, 320 e
+  260 de volume em IA) — confirma de forma independente a brecha B4 e valida tratar MEI como
+  caminho de primeira classe.
+- Em "contrato hapvida" (210) as fontes são `www2.hapvida.com.br` 7×, mais dois concorrentes.
+
+**Estado: ninguém da casa citado na URL-alvo.** É o número contra o qual medir na Fase 5, D+30.
+
+### 13.6 Pendências a propor (nada gravado no banco)
+
+1. `/tabela-de-preco-hapvida/` está com **preços fixos digitados** (R$ 71,98, R$ 116,11, R$ 90,63,
+   R$ 110,50, R$ 171,46, R$ 113,54) onde havia shortcodes — fere a regra da skill.
+2. O mesmo pillar tem a tabela Modalidade × A partir de e um H2 "Como Contratar o Plano Hapvida pelo
+   Melhor Valor" — sobreposição bidirecional com este artigo. Sem ceder isso, a duplicação só muda
+   de lugar.
+3. Prazos de ativação divergentes entre artigos: aqui 48h/10 dias úteis; Natal 24-48h; Curitiba
+   1-3 e 3-5 dias.
+4. FAQ id 7 e id 8 do catálogo estão atribuídas ao pillar de preço; este artigo é a casa natural.
+5. Link interno apontando para `como-contratar-plano-hapvida` (slug inexistente).
+6. Corrigir o `RE_SHORTCODE_TABELA` do `checkpoint_preco_primeiro.py`.
+7. Registro do artigo 64 no Supabase incompleto (`h2s`, `faqs`, `links_saida`).
+8. `rank_math_title` e `rank_math_description` deste artigo estão **vazios**.
