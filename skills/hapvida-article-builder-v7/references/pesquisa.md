@@ -17,7 +17,9 @@ A pesquisa deixou de ser uma skill separada (de alta fricção, 2 conversas, sem
 > 5. **Seção 9 (`FORBIDDEN_TOKENS`) virou obrigatória** — sem ela o `checkpoint_verificar.py` roda com a trava 3 desarmada, avisando num aviso que ninguém lê.
 > 6. **Seção 11 (datas de coleta)** com política de validade: rede acima de 180 dias **reprova**. Rede envelhecida não faz o artigo mirar errado — faz ele mentir, e é YMYL.
 >
-> **O que NÃO mudou:** todo o roteiro DR1/DR2 anterior continua valendo integralmente. A v7.2 não corta pesquisa — ela impede que a pesquisa seja declarada feita sem ter sido.
+> 7. **Portão de pesquisa com dois juízes (Agentes 23 e 24)** no fim do Estágio 2, com a trava `checkpoint_suficiencia.py` antes deles. Erro de pesquisa não se conserta na redação: julgar cedo custa uma rodada, julgar tarde custa o artigo inteiro. Ver `references/juiz-pesquisa.md`.
+>
+> **O que NÃO mudou:** todo o roteiro DR1/DR2 anterior continua valendo integralmente. A v7.2 não corta pesquisa — ela impede que a pesquisa seja declarada feita sem ter sido, e que uma pesquisa insuficiente vire artigo.
 
 ---
 
@@ -462,9 +464,14 @@ Antes de UMA linha de HTML, **nesta ordem**:
 2. Rodar **`python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_fase0.py <caminho do PESQUISA_<slug>_COMPLETO.md> [city|tr|pillar|hospital]`** e **colar a saída na conversa**. Se não imprimir `✅ APROVADO`, **PARAR** — é proibido escrever HTML. *(O caminho apontava para a v5 até a v7.1 — corrigido na v7.2, junto com a reescrita da trava.)*
 
    **[V7.2] O que essa trava passou a conferir.** Até a v7.1 ela procurava **palavras** no arquivo ("volume", "rede", "diferenci"): um state file com o gabarito vazio — 516 bytes, tudo em `[X]` — passava com APROVADO em todos os itens. Agora ela **conta dado preenchido** e reprova: gabarito não preenchido (marcadores `[X]`, `[fonte]`, `[cidade]` acima de 3), `fonte:` vazia, menos de 8 URLs distintas ou 3 domínios primários, rede rasa (< 5 unidades com endereço em city), FAQ abaixo do piso, < 6 secundárias com veto, < 3 dados de nível 1-2, < 5 sub-perguntas de fan-out, `dados_unicos` não declarado ou < 10, coleta vencida (seção 11), anti-doorway sem aprovação **na própria linha** do rótulo, e ausência do bloco `FORBIDDEN_TOKENS`. **Ela continua sem julgar qualidade** — 15 FAQ contadas não são 15 FAQ boas.
-3. O usuário aprovou **explicitamente** o state file (o `APROVADO` do script é só "processo cumprido"; não substitui o aval humano).
+3. **[V7.2] PORTÃO DE PESQUISA — a pesquisa SUSTENTA o artigo?** Rodar
+   ```bash
+   python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_suficiencia.py <state_file.md> --cidade "[cidade]" --tipo city --ancoras <ancoras.txt>
+   ```
+   e, com a saída na mão, disparar os **Agentes 23 e 24** (juízes da pesquisa — `references/juiz-pesquisa.md`). **São duas perguntas diferentes:** o `checkpoint_fase0.py` mede se a pesquisa foi **feita**; este mede se ela **sustenta** o artigo — seção órfã, FAQ que sobrevive à troca da cidade, secundária de quem já é cliente, ganho do CI-2 em nível 4-5. Reprovado aqui, **volta ao Estágio 1**, ao agente da função — nunca para a redação.
+4. O usuário aprovou **explicitamente** o state file (o `APROVADO` dos scripts é só "processo cumprido"; não substitui o aval humano).
 
-Só com os três, iniciar o Bloco A. Faltando qualquer um, parar e fechar a lacuna — **nunca** "começar enquanto isso". Se o usuário pedir o HTML direto, a resposta correta é rodar/exibir o checkpoint e o que falta, não obedecer e pular a trava.
+Só com os quatro, iniciar o Bloco A. Faltando qualquer um, parar e fechar a lacuna — **nunca** "começar enquanto isso". Se o usuário pedir o HTML direto, a resposta correta é rodar/exibir o checkpoint e o que falta, não obedecer e pular a trava.
 
 ---
 
@@ -483,6 +490,7 @@ A Fase 0 **é** o Estágio 1 da linha. O mapa, para não sobrar parte órfã nem
 | DR2 Partes 1-4 — kit on-page, diferenciais, FAQ, anti-doorway | **5** (com CI-1/CI-2 antes) | forte 🔒 |
 | Seção 9 `FORBIDDEN_TOKENS` | **6** (conferente) — nunca quem coletou | forte 🔒 |
 | Seção 11 datas | **22** (roteador) abre; cada agente carimba a sua | barato |
+| **Portão de pesquisa — julgar o que foi coletado** | **23** (suficiência/verdade) + **24** (originalidade/valor) | forte 🔒 |
 
 **A trava de separação continua valendo aqui:** quem coletou a rede (Agente 2) **não** é quem fecha os tokens proibidos (Agente 6). Lista de proibição escrita por quem coletou é lista que protege o próprio erro.
 

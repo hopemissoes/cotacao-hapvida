@@ -39,12 +39,13 @@ PADRAO = {
     "11": "forte", "19": "medio", "20": "barato",
     "12": "forte", "13": "forte", "14": "medio", "15": "forte",
     "16a": "forte", "16b": "forte", "16c": "forte",
-    "21": "forte", "17": "medio", "18": "barato", "22": "barato",
+    "21": "forte", "23": "forte", "24": "forte",
+    "17": "medio", "18": "barato", "22": "barato",
 }
 
 # 🔒 não aceitam rebaixamento (T1)
 TRAVADOS = {"0", "ci-1", "ci-2", "5", "6", "11", "12", "13", "15",
-            "16a", "16b", "16c", "21"}
+            "16a", "16b", "16c", "21", "23", "24"}
 
 # Pares (produtor, conferente) que precisam diferir de MODELO (T2)
 PARES = [
@@ -56,6 +57,7 @@ PARES = [
     ("11", "19", "editor-chefe x voz humana"),
     ("5", "13", "fio condutor x anti-doorway"),
     ("13", "21", "anti-doorway na producao x varredura final"),
+    ("23", "24", "juiz P-A x juiz P-B (as duas lentes da pesquisa)"),
 ]
 
 JUIZES = ("16a", "16b", "16c")
@@ -64,7 +66,7 @@ EDITOR_FINAL = "11"   # quem assina o texto inteiro (T3)
 OBRIGATORIOS_BASE = [
     "1", "2", "3", "4", "ci-1", "ci-2", "5", "6", "7",
     "8", "9", "10", "11", "12", "13", "14", "15",
-    "16a", "16b", "16c", "21", "18",
+    "16a", "16b", "16c", "21", "23", "24", "18",
 ]
 # Por tipo de artigo
 OBRIGATORIOS_EXTRA = {
@@ -227,6 +229,14 @@ def conferir(plano, monomodelo, tipo):
             grave("T3 nenhum juiz roda em modelo diferente do editor-chefe "
                   "(%s) — quem assina o texto final nao pode ser o unico "
                   "ponto de vista do painel" % modelo_editor)
+
+    # T3b — portao de pesquisa
+    m5 = modelos.get("5")
+    m23, m24 = modelos.get("23"), modelos.get("24")
+    if m5 and m23 and m24 and m23 == m5 and m24 == m5:
+        grave("T3b juizes da pesquisa (23 e 24) ambos no modelo do Agente 5 (%s) — "
+              "quem sintetizou a pesquisa nao pode ser o unico ponto de vista que "
+              "a aprova" % m5)
 
     return erros, avisos
 

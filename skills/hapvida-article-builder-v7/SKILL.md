@@ -11,7 +11,7 @@ description: >
   imagem da tabela desce para o fim da seção de preço (v7.1). Os H2 de preço/tabela têm
   prioridade de ordem sobre todos os demais H2. Trava: checkpoint_preco_primeiro.py.
   [V7.2] ACRESCENTA a ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO: artigo novo sai
-  automaticamente pela linha de 23 agentes (não é mais opt-in), com ORQUESTRADOR de
+  automaticamente pela linha de 25 agentes (não é mais opt-in), com ORQUESTRADOR de
   contrato escrito, PAINEL DE 3 JUÍZES em modelos distintos e roteamento de cada
   agente pelo CUSTO DO ERRO (forte/médio/barato) — quem confere nunca roda no mesmo
   modelo de quem produziu. E fecha o fluxo com a VARREDURA FINAL ANTI-DOORWAY
@@ -65,27 +65,28 @@ description: >
 >
 > **O que a V7.2 estabelece — quatro coisas:**
 >
-> 1. **A linha de agentes vira o PADRÃO, não um pedido.** Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de 23 agentes; edição pontual, consulta e auditoria avulsa saem em agente único. Capacidade que só roda quando alguém lembra é capacidade dormente — e o artigo novo é justamente o caso de maior custo de erro.
+> 1. **A linha de agentes vira o PADRÃO, não um pedido.** Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de 25 agentes; edição pontual, consulta e auditoria avulsa saem em agente único. Capacidade que só roda quando alguém lembra é capacidade dormente — e o artigo novo é justamente o caso de maior custo de erro.
 > 2. **O ORQUESTRADOR ganha contrato escrito.** A sessão principal decide o roteamento, guarda o state file, **revisa toda saída de subagente antes de ela virar insumo**, segura os portões e resolve empate — e **não** executa tarefa em lote, **não** aprova o próprio trabalho, **não** repassa o histórico da conversa no lugar do bastão. *Ele é o único que vê tudo, e por isso é o único que não pode julgar sozinho.*
-> 3. **Multi-modelo: roteamento por custo do erro + separação de modelo.** Cada um dos 23 agentes roda no degrau **forte 🔒 / médio / barato** escolhido por *"se este agente errar, alguma trava pega?"*; **o conferente nunca roda no mesmo modelo do produtor** (2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**); e o **painel de juízes deixa de ser monocultura** — ≥ 2 modelos distintos e ≥ 1 juiz em modelo diferente do editor-chefe. O próprio SKILL.md já admitia o problema: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. **Lente separa o que cada juiz procura; modelo separa o que cada juiz é incapaz de ver.**
+> 3. **Multi-modelo: roteamento por custo do erro + separação de modelo.** Cada um dos 25 agentes roda no degrau **forte 🔒 / médio / barato** escolhido por *"se este agente errar, alguma trava pega?"*; **o conferente nunca roda no mesmo modelo do produtor** (2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**); e o **painel de juízes deixa de ser monocultura** — ≥ 2 modelos distintos e ≥ 1 juiz em modelo diferente do editor-chefe. O próprio SKILL.md já admitia o problema: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. **Lente separa o que cada juiz procura; modelo separa o que cada juiz é incapaz de ver.**
 > 4. **VARREDURA FINAL ANTI-DOORWAY — o novo Agente 21, obrigatório.** Última chamada antes de publicar, rodando **no artigo que vai ao ar**: trava mecânica (`checkpoint_doorway_final.py` — teste de substituição medido, seção sem âncora, clichê de operadora, sobreposição de shingles com os artigos irmãos, title/meta) **+** consulta ao banco (overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos). Reprovou, não publica.
 >
 > 5. **A FASE 0 endurecida — a trava passou a contar dado, não palavra.** O `checkpoint_fase0.py` procurava vocabulário ("volume", "rede", "diferenci"): um state file com o gabarito vazio, 516 bytes, passava com **APROVADO em todos os itens**. Reescrito, ele conta unidades com endereço e fonte, FAQ, secundárias com veto, URLs primárias, dados de nível 1-2 e datas de coleta — e reprova gabarito não preenchido, `fonte:` vazia, rede coletada há mais de 180 dias e ausência do bloco `FORBIDDEN_TOKENS` (sem o qual o `checkpoint_verificar.py` rodava desarmado). Junto vieram, no `references/pesquisa.md`: **`consultar_rede` antes da web** com a regra das duas listas, a **Parte 7 — dado proprietário** (as 6 chamadas de MCP que produzem o nível 1-2 que a v6 exigia sem dizer onde achar), a **Parte 8 — `nao_encontrado`** e as **seções 9 e 11** do state file.
 >
-> **Três travas mecânicas novas, cobrindo a linha inteira:**
-> - `checkpoint_fase0.py` (reescrito) — **entrada**, sobre o state file, antes de existir HTML.
+> **Quatro travas mecânicas novas, cobrindo a linha inteira:**
+> - `checkpoint_fase0.py` (reescrito) — **entrada**, sobre o state file: a pesquisa foi FEITA?
+> - `checkpoint_suficiencia.py` — **portão de pesquisa**, fim do Estágio 2: a pesquisa SUSTENTA o artigo?
 > - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS`. É a única trava da skill que roda antes de existir texto.
 > - `checkpoint_doorway_final.py` — **saída**, depois do portão humano. É a única que roda no HTML final.
 >
 > **Ressalvas (obrigatórias da V7.2):**
 > - **Degrau ≠ modelo.** O degrau diz quanto julgamento o assento exige; a coluna de modelo diz qual cérebro senta nele. Um juiz `forte | sonnet` continua sendo assento forte — só roda em outro modelo para não dividir ponto cego com quem ele confere.
-> - **Nada de barateamento na verificação.** Agentes 0, CI-1, CI-2, 5, 6, 11, 12, 13, 15, 16a-c e **21** são 🔒. Rebaixamento (só em agente não travado) desce **um degrau por vez** e vai com o motivo escrito.
+> - **Nada de barateamento na verificação.** Agentes 0, CI-1, CI-2, 5, 6, 11, 12, 13, 15, 16a-c, **21**, **23** e **24** são 🔒. Rebaixamento (só em agente não travado) desce **um degrau por vez** e vai com o motivo escrito.
 > - **Modelo barato nunca segura dado YMYL sem trava.** Rede assistencial, carência, coparticipação, preço e regra da ANS: médio ou forte.
 > - **Sessão com um modelo só é caso legítimo, mas tem de ser declarado** (`MODO: monomodelo`). Mesmo modelo com prompt diferente **não** é modelo diferente — o ponto cego é do modelo, não do prompt. Aí o voto majoritário vale menos e o **portão humano vale mais**.
 > - **Mais agentes não é mais qualidade por si.** O ganho vem da **separação** (quem produz nunca confere) e do **julgamento adversarial**, não do número de chamadas. Dividir tarefa pequena entre agentes só queima token e contexto.
 > - **A v7.2 não muda o artigo** — não mexe em seção, ordem, schema, paleta, limites, anti-doorway de conteúdo nem `[VERIFICAR]`. É camada de produção.
 >
-> **➡️ Antes de disparar a linha nesta v7.2, leia `references/modelos-agentes.md`** (roteamento dos 23 agentes, as 8 travas, o `PLANO_MODELOS`, como passar `model` no `Agent`/`Workflow`) **e `references/doorway-final.md`** (a varredura do Agente 21, limiares e o que fazer com cada achado).
+> **➡️ Antes de disparar a linha nesta v7.2, leia `references/modelos-agentes.md`** (roteamento dos 25 agentes, as 8 travas, o `PLANO_MODELOS`, como passar `model` no `Agent`/`Workflow`) **e `references/doorway-final.md`** (a varredura do Agente 21, limiares e o que fazer com cada achado).
 
 # Base V6 (tudo abaixo continua valendo) — VOZ HUMANA + GEO POR PLATAFORMA + IMAGEM AUTOMÁTICA
 
@@ -495,7 +496,7 @@ Os gatilhos antigos ("linha de agentes", "agentes especialistas", "monta a equip
 
 ### [V7.2] O ORQUESTRADOR (quem é você nesta linha)
 
-A linha tem 23 agentes e **um orquestrador — a sessão principal, você**. O papel é específico e limitado, e é o que separa "linha de montagem" de "vários agentes soltos":
+A linha tem 25 agentes e **um orquestrador — a sessão principal, você**. O papel é específico e limitado, e é o que separa "linha de montagem" de "vários agentes soltos":
 
 **O orquestrador FAZ:**
 - **Decide o roteamento** (com o Agente 22) e roda as travas de pré-voo.
@@ -522,7 +523,7 @@ Cada agente, ao terminar, **escreve um bastão curto** (ver "PASSAGEM DE BASTÃO
 
 Cada caixinha é um agente. **Agentes do mesmo estágio podem rodar juntos; o que confere é SEMPRE um agente diferente de quem produziu.** Você pode dividir mais (ex.: separar "rede própria" de "rede credenciada") ou juntar, conforme o artigo.
 
-**[V7.2] Cada agente abaixo roda no modelo do seu degrau** — **forte 🔒 / médio / barato**, escolhido pelo custo do erro. A tabela completa (agente por agente, com o porquê) está em `references/modelos-agentes.md` §3; as travas de diversidade (conferente nunca no mesmo modelo do produtor; painel com modelos distintos) estão na §4. **A linha passa a ter 23 agentes** (0 a 22) com dois assentos novos: o **Agente 22 — Roteador de modelos** (escreve o `PLANO_MODELOS` e roda `checkpoint_modelos.py` ANTES do Estágio 1) e o **Agente 21 — Varredura final anti-doorway** (a última chamada, DEPOIS do portão humano).
+**[V7.2] Cada agente abaixo roda no modelo do seu degrau** — **forte 🔒 / médio / barato**, escolhido pelo custo do erro. A tabela completa (agente por agente, com o porquê) está em `references/modelos-agentes.md` §3; as travas de diversidade (conferente nunca no mesmo modelo do produtor; painel com modelos distintos) estão na §4. **A linha passa a ter 25 agentes** (0 a 24) com dois assentos novos: o **Agente 22 — Roteador de modelos** (escreve o `PLANO_MODELOS` e roda `checkpoint_modelos.py` ANTES do Estágio 1) e o **Agente 21 — Varredura final anti-doorway** (a última chamada, DEPOIS do portão humano).
 
 **[V6] A linha tem 21 agentes** (era 18 na v5): entraram o **19 — Voz humana** e o **20 — Imagem da tabela** no estágio 3.6, e o **Agente 0 — Diagnóstico do pillar** quando o artigo é pillar já existente. Os estágios são: 1 pesquisa · 2 conferência · 3 redação · **3.6 voz e imagem [V6]** · 3.5 editor-chefe · 4 auditorias · 5 juízo adversarial.
 
@@ -544,6 +545,23 @@ Cada caixinha é um agente. **Agentes do mesmo estágio podem rodar juntos; o qu
 - **Agente 6 — Conferente de fatos:** pega **cada dado** do state file e confere contra a fonte. O que não bater vira `[VERIFICAR]` e **sai**. (É o Modo 1 de veracidade, aplicado à pesquisa, antes de qualquer HTML.) → bastão: state file conferido.
 - **Agente 7 — Conferente de dados (DataForSeo):** confere volume/dificuldade/posição/citação das keywords. → bastão: validação.
 - 🚦 **PORTÃO HUMANO:** você aprova o state file. Trava de saúde (YMYL) — não pula. Roda o `checkpoint_fase0.py`.
+
+**ESTÁGIO 2.5 — [V7.2] PORTÃO DE PESQUISA: painel de juízes da FASE 0 (bloqueante)**
+
+Até a v7.1 o juízo adversarial só existia **no fim**, sobre o artigo pronto. Mas **erro de pesquisa não se conserta na redação**: se a S7 não tem dado local, nenhum juiz de texto faz aparecer — o redator preenche com genérico, o editor costura bonito, e três estágios depois o juiz reprova "doorway na S7". **Julgar cedo custa uma rodada; julgar tarde custa o artigo inteiro.**
+
+- **Trava mecânica primeiro** — `checkpoint_suficiencia.py` entrega aos juízes o mapa do que está vazio:
+  ```bash
+  python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_suficiencia.py <state_file.md> --cidade "[cidade]" --tipo city --ancoras <ancoras.txt>
+  ```
+  Reprova (🔴): **seção órfã** (nenhum item da pesquisa a sustenta) · > 20% das FAQ sobrevivem à troca da cidade, ou FAQ duplicadas entre si · secundária "qualificada" que é tráfego de quem **já é cliente** · ganho do CI-2 em defensibilidade 4-5 ou não declarado · > 34% dos diferenciais sem âncora local.
+- **Agente 23 — Juiz P-A (suficiência e verdade).** *"Dá para escrever este artigo inteiro só com isto, sem inventar nada?"* Percorre o esqueleto seção a seção nomeando o dado que sustenta cada uma; confere fonte forte para o que é estrutural, a regra das duas listas na rede, a coerência entre `[VERIFICAR]` e `nao_encontrado`, e se o `FORBIDDEN_TOKENS` cobre o que a pesquisa descartou.
+- **Agente 24 — Juiz P-B (originalidade e valor).** *"Se for publicado com esta pesquisa, merece existir na SERP?"* Teste de substituição aplicado **à pesquisa**; o ganho do CI-2 é nível 1-2 de verdade?; FAQ nasceram de dado local ou de paráfrase de PAA?; as secundárias trazem quem compra?; o fio condutor é tese ou frase bonita?; o que os MUST-MATCH cobrem e nós não?
+- **Modelos:** os dois são **forte 🔒**, em **modelos distintos entre si**, e **pelo menos um deles em modelo diferente do Agente 5** — quem sintetizou a pesquisa não pode ser o único ponto de vista que a aprova (trava T3b).
+- **Rubrica e parada:** 4 dimensões (suficiência · verdade/fonte · originalidade · valor comercial), libera com **todas ≥ 8 e zero 🔴**; senão refino dirigido, **máx. 2 rodadas**, então portão humano. Achado volta ao **agente da função** — seção órfã → 2/3 · fonte fraca → 6 · FAQ genérica → 4+5 · ganho fraco → CI-2 · fio condutor vago → 5 · secundária ruim → 4.
+- **Por que dois juízes e não três:** no fim da linha o objeto é grande (artigo inteiro, 5 dimensões) e é a última chance. Aqui o objeto é menor e estruturado, a trava já cobre o contável, e sobram duas perguntas de julgamento. Um terceiro repetiria lente sem cobrir risco novo — e o custo apareceria em **todo** artigo.
+
+> **Procedimento completo, rubrica e prompt-molde: `references/juiz-pesquisa.md`.** 🚦 Reprovado aqui, **volta ao Estágio 1** — nunca "começa o Bloco A enquanto isso".
 
 **ESTÁGIO 3 — REDAÇÃO (só usa o que foi aprovado; proibido inventar)**
 - **Agente 8 — Redator do Bloco A** · **Agente 9 — Bloco B** · **Agente 10 — Bloco C.** Cada redator usa **apenas** o state file aprovado; se um dado não está lá, não escreve. **Cada redator recebe e honra o FIO CONDUTOR** (a voz/ângulo da cidade, do Agente 5) — para os blocos não destoarem um do outro.
@@ -594,6 +612,7 @@ Os dois agentes abaixo são **novos na v6** e existem por um motivo específico:
 - **REGRA DE PARADA (nunca girar infinito):** repetir painel→refino até (a) a **mediana** das **5 dimensões ≥ 8/10 e zero 🔴 confirmado por ≥2 juízes**, OU (b) **no máximo 2 rodadas** — então escalar ao portão humano dizendo o que travou e por quê.
 - **Fallback barato:** em artigo de baixo risco/baixo volume, 1 juiz só resolve; o painel de 3 é o padrão para artigo comercial relevante ou de alto risco (custo: 3× o juiz).
 - **[V4] Travas mecânicas = 🔴 automático (acima das notas dos juízes):** `checkpoint_completude.py` reprovado (artigo curto/raso/rede rasa), `checkpoint_verificar.py` reprovado (dado `[VERIFICAR]`/proibido) **e [V7] `checkpoint_preco_primeiro.py` reprovado (tabela fora do topo ou H2 de preço atrás de outro H2)** **bloqueiam a publicação independentemente das medianas** — nenhuma nota alta de juiz compra um artigo curto ou com dado proibido. Some-se a isso a conferência de rede COMPLETA pelo editor-chefe.
+- **[V7.2] Trava de entrada da redação (🔴 no fim do Estágio 2):** `checkpoint_suficiencia.py` reprovado — seção órfã, FAQ genérica/duplicada, secundária de quem já é cliente, ganho do CI-2 em nível 4-5 — **impede o início do Bloco A**. Erro de pesquisa não se conserta escrevendo.
 - **[V7.2] Trava de saída (🔴 depois do portão humano, antes de publicar):** `checkpoint_doorway_final.py` reprovado — texto que sobrevive à troca de cidade acima do limite, seção inteira sem âncora local, clichê ocupando parágrafo, sobreposição ≥ 15% com artigo irmão (ou trecho literal ≥ 40 palavras), title/meta que servem para qualquer praça — **bloqueia a publicação**. Nenhuma nota de juiz compra seção sem âncora.
 - **[V7.2] Trava de pré-voo (🔴 antes do Estágio 1, não depois):** `checkpoint_modelos.py` reprovado — agente 🔒 rebaixado, conferente no mesmo modelo do produtor, painel monomodelo não declarado — **impede o disparo da linha**. É a única trava desta skill que roda antes de existir texto: depois do artigo pronto, o plano já foi executado e o relatório não conserta nada.
 - **[V6] Duas travas mecânicas novas, no mesmo nível (🔴 automático):**
@@ -688,8 +707,12 @@ De: Agente [N] ([função]) → Para: Agente [N+1] ([função])
       ↓
 ORQUESTRADOR (state file · revisão de toda saída · portões · empate)
       ↓
-E1 pesquisa 1-5 + CI-1/CI-2   →  E2 conferência 6-7   →  E3 redação 8-10
-      ↓                                                        ↓
+E1 pesquisa 1-5 + CI-1/CI-2   →  E2 conferência 6-7
+      ↓
+E2.5 PORTÃO DE PESQUISA: checkpoint_suficiencia.py 🔴 + juízes 23 e 24
+      ↓
+E3 redação 8-10
+      ↓
 E3.5 editor-chefe 11  →  E3.6 voz 19 · imagem 20  →  E4 auditorias 12-15
       ↓
 E5 PAINEL DE 3 JUÍZES (lentes distintas + MODELOS distintos) → refino dirigido
@@ -701,7 +724,9 @@ E5 PAINEL DE 3 JUÍZES (lentes distintas + MODELOS distintos) → refino dirigid
 17 schema · 18 registro no banco
 ```
 
-**As duas travas mecânicas novas ficam nos extremos** — uma antes de existir texto, outra depois de o texto estar pronto. Todas as outras travas da skill continuam no meio, onde sempre estiveram.
+**As travas novas cobrem os três momentos que a skill não cobria:** `checkpoint_fase0.py` (a pesquisa foi feita?), `checkpoint_suficiencia.py` (a pesquisa sustenta o artigo?) e `checkpoint_doorway_final.py` (o que vai ao ar é original?) — mais o `checkpoint_modelos.py` antes de tudo. Todas as outras travas continuam no meio, onde sempre estiveram.
+
+> **Os dois portões de julgamento, e por que são diferentes.** O do Estágio 2.5 julga **pesquisa** com 2 lentes; o do Estágio 5 julga **artigo** com 3. O primeiro existe porque erro de pesquisa não se conserta escrevendo — e o segundo continua existindo porque pesquisa boa ainda vira texto ruim.
 
 ### O critério (uma frase)
 

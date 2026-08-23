@@ -56,7 +56,7 @@ hipótese. Rebaixar um 🔒 é a falsa economia que esta camada existe para impe
 
 ---
 
-## 3. A linha da v7 roteada (23 agentes — 0 a 22)
+## 3. A linha da v7 roteada (25 agentes — 0 a 24)
 
 Numeração e funções idênticas às do `SKILL.md` — aqui só entra a coluna de
 modelo e o porquê.
@@ -80,6 +80,8 @@ modelo e o porquê.
 |---|---|---|---|
 | 6 | Conferente de fatos | **forte** 🔒 | é a trava anti-alucinação principal; **e roda em modelo diferente do Agente 2** (§4) |
 | 7 | Conferente de dados DataForSeo | barato | o número confere com a fonte — erro é pego na hora |
+| **23** | **Juiz P-A — suficiência e verdade [V7.2]** | **forte** 🔒 | decide se dá para escrever sem inventar |
+| **24** | **Juiz P-B — originalidade e valor [V7.2]** | **forte** 🔒 | decide se o artigo merece existir; **modelo ≠ 23**, e **≥1 dos dois ≠ Agente 5** |
 
 ### Estágio 3 — Redação
 
@@ -134,7 +136,7 @@ modelo e o porquê.
 ## 4. As travas (o que esta camada acrescenta de inegociável)
 
 **T1 — Nunca barateie a verificação.** Agentes 🔒 (0, CI-1, CI-2, 5, 6, 11, 12,
-13, 15, 16a-c, 21) rodam sempre no degrau forte. Sem exceção por prazo, por lote ou
+13, 15, 16a-c, 21, 23, 24) rodam sempre no degrau forte. Sem exceção por prazo, por lote ou
 por artigo "pequeno".
 
 **T2 — Quem confere roda em modelo diferente de quem produziu.** É a regra-mãe
@@ -149,7 +151,14 @@ acima: mesma função separada **e** modelo separado. Pares obrigatórios:
 | 11 (costura da voz) | 19 (voz humana) | sim |
 | 5 (fio condutor/anti-doorway) | 13 (anti-doorway) | sim |
 | 13 (anti-doorway na produção) | 21 (varredura final) | sim |
+| 5 (síntese da pesquisa) | 23 **ou** 24 | ao menos um dos dois em modelo diferente do 5 |
+| 23 (juiz P-A) | 24 (juiz P-B) | sim — as duas lentes em modelos diferentes |
 | 11 + 8/9/10 | pelo menos 1 juiz | sim |
+
+**T3b — Diversidade no portão de pesquisa [V7.2].** Os juízes 23 e 24 rodam em
+modelos **diferentes entre si**, e **pelo menos um dos dois** em modelo diferente
+do Agente 5 — quem sintetizou a pesquisa não pode ser o único ponto de vista que
+a aprova. Mesma lógica do painel final, ajustada ao tamanho do objeto.
 
 **T3 — Diversidade no painel.** Entre 16a, 16b e 16c tem de haver **no mínimo 2
 modelos distintos**, e **pelo menos um juiz** em modelo diferente de todos os
@@ -200,6 +209,8 @@ CI-1 | desmontagem        | forte  | opus    |
 CI-2 | ganho-informacao   | forte  | opus    |
 5  | sintese-fio-condutor | forte  | opus    |
 6  | conferente-fatos     | forte  | opus    | T2 com o 2 (sonnet)
+23 | juiz-pesquisa-a      | forte  | sonnet  | != do 5 (opus), que sintetizou
+24 | juiz-pesquisa-b      | forte  | opus    | != do 23 (as duas lentes separadas)
 7  | conferente-dataforseo| barato | haiku   |
 8  | redator-bloco-a      | forte  | sonnet  | T2 com o 11 (opus)
 9  | redator-bloco-b      | medio  | sonnet  |

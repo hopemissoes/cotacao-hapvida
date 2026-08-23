@@ -9,7 +9,7 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 > A v7.1 fechou a **ordem do artigo**. A v7.2 não muda uma linha do artigo: muda **como ele é produzido**. Objetivo declarado: artigo mais completo e com dado mais verdadeiro — e a única forma de conseguir as duas coisas é **tirar da mesma cabeça** quem produz, quem confere e quem julga.
 >
 > ### 1. A linha de agentes vira o padrão
-> Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de **23 agentes** (0 a 22). Edição pontual, consulta e auditoria avulsa continuam em agente único. Os gatilhos antigos ("linha de agentes", "multiagente"…) passam a servir para pedir a linha **fora** do caso padrão. *Capacidade que só roda quando alguém lembra é capacidade dormente.*
+> Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de **25 agentes** (0 a 24). Edição pontual, consulta e auditoria avulsa continuam em agente único. Os gatilhos antigos ("linha de agentes", "multiagente"…) passam a servir para pedir a linha **fora** do caso padrão. *Capacidade que só roda quando alguém lembra é capacidade dormente.*
 >
 > ### 2. O orquestrador ganha contrato escrito
 > **Faz:** decide o roteamento, guarda o state file, **revisa toda saída de subagente antes de ela virar insumo**, segura os portões, resolve empate.
@@ -17,7 +17,7 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 > *Ele é o único que vê tudo, e por isso é o único que não pode julgar sozinho.*
 >
 > ### 3. Multi-modelo: roteamento por custo do erro + separação de modelo
-> Cada agente ganha um degrau — **forte 🔒 / médio / barato** — escolhido por *"se este agente errar, alguma trava pega?"*. Treze agentes ficam travados no forte (`0`, `CI-1`, `CI-2`, `5`, `6`, `11`, `12`, `13`, `15`, `16a-c`, `21`). E o **conferente nunca roda no mesmo modelo do produtor**: 2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**.
+> Cada agente ganha um degrau — **forte 🔒 / médio / barato** — escolhido por *"se este agente errar, alguma trava pega?"*. Quinze agentes ficam travados no forte (`0`, `CI-1`, `CI-2`, `5`, `6`, `11`, `12`, `13`, `15`, `16a-c`, `21`, `23`, `24`). E o **conferente nunca roda no mesmo modelo do produtor**: 2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**.
 >
 > ### 4. O painel de juízes deixa de ser monocultura
 > O próprio SKILL.md já admitia: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. A v3 respondeu com **lentes** distintas; faltava a outra metade. Agora: **≥ 2 modelos distintos** e **≥ 1 juiz em modelo diferente do editor-chefe**; achado de voz apontado só por um juiz que roda no mesmo modelo do editor **não conta voto**; e o "fallback de 1 juiz" fica restrito a artigo de baixo risco — artigo comercial roda o painel de 3.
@@ -56,8 +56,19 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 >
 > No roteiro (`references/pesquisa.md`): **`consultar_rede` antes da web** com a regra das duas listas (catálogo × guia oficial); **Parte 7 — dado proprietário** com as 6 chamadas de MCP que produzem o nível 1-2 que a v6 exigia sem dizer onde achar (o `cotador_fila` é o mais subestimado: a SERP mostra o que buscam, o cotador mostra o que perguntam quando já estão comprando); **Parte 8 — `nao_encontrado`**; e as **seções 9 e 11** do state file. Também corrigido o comando do gate, que apontava para a pasta da **v5**.
 >
-> ### 7. Três travas mecânicas, cobrindo a linha inteira
-> - `checkpoint_fase0.py` (reescrito) — **entrada**, sobre o state file, antes de existir HTML.
+> ### 7. Portão de pesquisa — dois juízes ANTES de escrever (Agentes 23 e 24)
+> O juízo adversarial da skill só existia **no fim**, sobre o artigo pronto. Mas **erro de pesquisa não se conserta na redação**: se a S7 não tem dado local, nenhum juiz de texto faz aparecer — o redator preenche com genérico, o editor costura bonito, e três estágios depois o juiz reprova "doorway na S7". **Julgar cedo custa uma rodada; julgar tarde custa o artigo inteiro.**
+>
+> - **`checkpoint_suficiencia.py`** roda primeiro e entrega aos juízes o mapa do que está vazio. Reprova: **seção órfã** (nenhum item da pesquisa a sustenta) · > 20% das FAQ sobrevivem à troca da cidade, ou FAQ duplicadas entre si · secundária "qualificada" que é tráfego de quem **já é cliente** (2ª via, boleto, telefone) · ganho do CI-2 em defensibilidade 4-5 · > 34% dos diferenciais sem âncora local.
+> - **Agente 23 — Juiz P-A:** *"dá para escrever este artigo inteiro só com isto, sem inventar nada?"*
+> - **Agente 24 — Juiz P-B:** *"se for publicado com esta pesquisa, merece existir na SERP?"*
+> - Modelos distintos entre si e ao menos um diferente do Agente 5 (trava T3b). Rubrica de 4 dimensões, libera com todas ≥ 8 e zero 🔴, máx. 2 rodadas. Achado volta ao **agente da função**, não à redação.
+>
+> **Dois juízes e não três:** no fim da linha o objeto é grande e é a última chance; aqui é menor e estruturado, a trava já cobre o contável, e sobram duas perguntas de julgamento. Um terceiro repetiria lente sem cobrir risco novo — em **todo** artigo.
+>
+> ### 8. Quatro travas mecânicas, cobrindo a linha inteira
+> - `checkpoint_fase0.py` (reescrito) — **entrada**: a pesquisa foi FEITA?
+> - `checkpoint_suficiencia.py` — **portão de pesquisa**: a pesquisa SUSTENTA o artigo?
 > - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS` (a única trava que roda antes de existir texto).
 > - `checkpoint_doorway_final.py` — **saída**, depois do portão humano (a única que roda no HTML final).
 >
@@ -68,7 +79,7 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 > - **Não proíbe rodar com um modelo só** — exige declarar (`MODO: monomodelo`) e assumir o que se perde: mesmo modelo com prompt diferente **não** é modelo diferente.
 > - **A varredura final mede originalidade, não utilidade.** Texto original, bem ancorado e inútil passa — contra isso valem o CI-2 e o painel.
 >
-> **Arquivos novos:** `references/modelos-agentes.md`, `references/doorway-final.md`, `checkpoint_modelos.py`, `checkpoint_doorway_final.py`.
+> **Arquivos novos:** `references/modelos-agentes.md`, `references/doorway-final.md`, `references/juiz-pesquisa.md`, `checkpoint_modelos.py`, `checkpoint_doorway_final.py`, `checkpoint_suficiencia.py`.
 > **Reescrito:** `checkpoint_fase0.py`.
 > **Modificados:** `SKILL.md` (bloco V7.2 + seção "ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO" + contrato do orquestrador + linha por padrão + Estágio 0 com o Agente 22 + Agente 21 no portão final + painel de juízes + duas travas na lista de bloqueios), `references/pesquisa.md` (Fase 0 endurecida: ordem das fontes de rede, Partes 7 e 8, seções 9/10/11, gate corrigido).
 >
