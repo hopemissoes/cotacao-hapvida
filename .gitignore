@@ -10,3 +10,7 @@ app_cotacao_backup.py
 nul
 static/
 DOCUMENTACAO_FLUXO.txt
+
+# graphify
+graphify-out/cost.json
+graphify-out/cache/
