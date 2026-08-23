@@ -5,6 +5,11 @@
 > ela decide **em qual modelo cada agente roda** e **quais pares de agentes não
 > podem compartilhar modelo**.
 
+**Artigo novo do zero sai automaticamente pela linha** (city, hospital, TR,
+pillar). O usuário não precisa pedir "multiagente". Edição pontual, consulta e
+auditoria avulsa saem em **agente único** — abrir a linha para trocar um
+parágrafo custa mais do que resolve.
+
 ---
 
 ## 1. O critério de roteamento
@@ -51,7 +56,7 @@ hipótese. Rebaixar um 🔒 é a falsa economia que esta camada existe para impe
 
 ---
 
-## 3. A linha da v7 roteada (22 agentes)
+## 3. A linha da v7 roteada (23 agentes — 0 a 22)
 
 Numeração e funções idênticas às do `SKILL.md` — aqui só entra a coluna de
 modelo e o porquê.
@@ -112,6 +117,7 @@ modelo e o porquê.
 | 16a | Juiz A — lente factual/YMYL | **forte** 🔒 | — |
 | 16b | Juiz B — lente anti-doorway/SEO | **forte** 🔒 | — |
 | 16c | Juiz C — lente do leitor/voz | **forte** 🔒 | — |
+| **21** | **Varredura final anti-doorway [V7.2]** | **forte** 🔒 | última chamada no HTML que vai ao ar; **modelo diferente do Agente 13** (quem auditou doorway na produção não assina a liberação) |
 | 17 | Schema JSON-LD | médio | mecânico, mas o erro é silencioso; valida em ferramenta externa |
 | 18 | Registro no banco | barato | chamada de MCP com campos fechados |
 | **22** | **Roteador de modelos [V7.2]** | barato | escreve o `PLANO_MODELOS` antes do Estágio 1 e roda `checkpoint_modelos.py` |
@@ -128,7 +134,7 @@ modelo e o porquê.
 ## 4. As travas (o que esta camada acrescenta de inegociável)
 
 **T1 — Nunca barateie a verificação.** Agentes 🔒 (0, CI-1, CI-2, 5, 6, 11, 12,
-13, 15, 16a-c) rodam sempre no degrau forte. Sem exceção por prazo, por lote ou
+13, 15, 16a-c, 21) rodam sempre no degrau forte. Sem exceção por prazo, por lote ou
 por artigo "pequeno".
 
 **T2 — Quem confere roda em modelo diferente de quem produziu.** É a regra-mãe
@@ -142,6 +148,7 @@ acima: mesma função separada **e** modelo separado. Pares obrigatórios:
 | 8/9/10 (redação) | 11 (editor-chefe) | sim |
 | 11 (costura da voz) | 19 (voz humana) | sim |
 | 5 (fio condutor/anti-doorway) | 13 (anti-doorway) | sim |
+| 13 (anti-doorway na produção) | 21 (varredura final) | sim |
 | 11 + 8/9/10 | pelo menos 1 juiz | sim |
 
 **T3 — Diversidade no painel.** Entre 16a, 16b e 16c tem de haver **no mínimo 2
@@ -207,6 +214,7 @@ CI-2 | ganho-informacao   | forte  | opus    |
 16a| juiz-factual         | forte  | opus    |
 16b| juiz-doorway         | forte  | sonnet  | T3 — lente B em modelo distinto
 16c| juiz-leitor          | forte  | opus    |
+21 | varredura-doorway    | forte  | opus    | T2 com o 13 (sonnet)
 17 | schema               | medio  | sonnet  |
 18 | registro-banco       | barato | haiku   |
 ```

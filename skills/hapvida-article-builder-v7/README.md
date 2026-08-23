@@ -1,41 +1,59 @@
-# hapvida-article-builder-v7 — PREÇO PRIMEIRO + MULTI-AGENTES EM MODELOS DIFERENTES
+# hapvida-article-builder-v7 — PREÇO PRIMEIRO + ORQUESTRAÇÃO MULTI-AGENTE/MULTI-MODELO
 
 Skill para produção de artigos HTML para tabelaplanos.com.br.
 
-**Só dispara sob pedido explícito.** Gatilhos: `v7`, `versão 7`, `builder v7`, `preço primeiro`, `tabela primeiro`, `ordem preço-primeiro`, `sumário depois da tabela`, `H2 de preço primeiro` — e, para a camada v7.2: `multi-agente`, `modelos diferentes`, `qual modelo`, `roteamento de modelo`, `plano de modelos`, `agente barato`, `modelo forte`, `custo da linha`, `juiz em outro modelo`, `erro correlacionado`, `monomodelo`. Sem isso, use v1-v6 — as sete coexistem para comparação.
+**Só dispara sob pedido explícito.** Gatilhos: `v7`, `versão 7`, `builder v7`, `preço primeiro`, `tabela primeiro`, `ordem preço-primeiro`, `sumário depois da tabela`, `H2 de preço primeiro` — e, para a camada v7.2: `multi-agente`, `modelos diferentes`, `qual modelo`, `roteamento de modelo`, `plano de modelos`, `agente barato`, `modelo forte`, `custo da linha`, `juiz em outro modelo`, `erro correlacionado`, `monomodelo`, `multiagente`, `orquestrador`, `painel de juízes`, `varredura final`, `detecta doorway`. Sem isso, use v1-v6 — as sete coexistem para comparação.
 
 > ## ⭐ V7.2 — o que esta camada acrescenta (sobre a v7.1)
 >
-> A v7.1 fechou a **ordem do artigo**. A v7.2 não toca em nenhuma linha do artigo: decide **em qual modelo cada agente da linha roda**.
+> A v7.1 fechou a **ordem do artigo**. A v7.2 não muda uma linha do artigo: muda **como ele é produzido**. Objetivo declarado: artigo mais completo e com dado mais verdadeiro — e a única forma de conseguir as duas coisas é **tirar da mesma cabeça** quem produz, quem confere e quem julga.
 >
-> ### 1. Roteamento por custo do erro
-> Cada um dos **22 agentes** ganha um degrau — **forte 🔒 / médio / barato** — escolhido por *"se este agente errar, alguma trava pega?"*. Barato onde um `checkpoint_*.py` ou um conferente com a fonte na mão pega. **Forte onde o erro é de julgamento e sai publicado sem ninguém notar.** Doze agentes ficam travados no forte: `0`, `CI-1`, `CI-2`, `5`, `6`, `11`, `12`, `13`, `15`, `16a-c`.
+> ### 1. A linha de agentes vira o padrão
+> Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de **23 agentes** (0 a 22). Edição pontual, consulta e auditoria avulsa continuam em agente único. Os gatilhos antigos ("linha de agentes", "multiagente"…) passam a servir para pedir a linha **fora** do caso padrão. *Capacidade que só roda quando alguém lembra é capacidade dormente.*
 >
-> ### 2. Separação de modelo, além da separação de função
-> A regra-mãe da linha ("quem inventa um dado nunca é quem confere esse dado") sobe um nível: **o conferente roda em modelo diferente do produtor** (2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13).
+> ### 2. O orquestrador ganha contrato escrito
+> **Faz:** decide o roteamento, guarda o state file, **revisa toda saída de subagente antes de ela virar insumo**, segura os portões, resolve empate.
+> **Não faz:** executar tarefa em lote, aprovar o próprio trabalho, repassar o histórico da conversa no lugar do bastão, preencher lacuna com plausibilidade.
+> *Ele é o único que vê tudo, e por isso é o único que não pode julgar sozinho.*
 >
-> ### 3. O painel de juízes deixa de ser monocultura
-> O próprio SKILL.md já admitia: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. A v3 respondeu com **lentes** distintas; faltava a outra metade. Agora o painel roda com **≥ 2 modelos distintos** e **≥ 1 juiz em modelo diferente do editor-chefe**. Lente separa o que cada juiz procura; **modelo separa o que cada juiz é incapaz de ver.** Achado de voz apontado só por um juiz que roda no mesmo modelo do editor-chefe **não conta voto**.
+> ### 3. Multi-modelo: roteamento por custo do erro + separação de modelo
+> Cada agente ganha um degrau — **forte 🔒 / médio / barato** — escolhido por *"se este agente errar, alguma trava pega?"*. Treze agentes ficam travados no forte (`0`, `CI-1`, `CI-2`, `5`, `6`, `11`, `12`, `13`, `15`, `16a-c`, `21`). E o **conferente nunca roda no mesmo modelo do produtor**: 2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**.
 >
-> ### 4. Trava mecânica nova — `checkpoint_modelos.py`
-> Roda **antes** do Estágio 1 (é a única trava da skill que roda antes de existir texto), sobre o bloco `PLANO_MODELOS` escrito pelo **Agente 22**.
+> ### 4. O painel de juízes deixa de ser monocultura
+> O próprio SKILL.md já admitia: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. A v3 respondeu com **lentes** distintas; faltava a outra metade. Agora: **≥ 2 modelos distintos** e **≥ 1 juiz em modelo diferente do editor-chefe**; achado de voz apontado só por um juiz que roda no mesmo modelo do editor **não conta voto**; e o "fallback de 1 juiz" fica restrito a artigo de baixo risco — artigo comercial roda o painel de 3.
+>
+> ### 5. Varredura final anti-doorway — o novo Agente 21 (obrigatório)
+> Última chamada **no HTML que vai ao ar**, depois do portão humano e antes do schema e do registro no banco. Existe porque **doorway não mora no parágrafo, mora no conjunto** — e entre o Agente 13 e a publicação ainda acontecem o editor-chefe, o refino dos juízes e as correções humanas, que é onde a frase "resolvida" vira genérica e o parágrafo colado do artigo irmão entra para tapar buraco.
+>
+> Metade mecânica (`checkpoint_doorway_final.py`) e metade de banco (overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos):
+>
+> | Medida | 🟡 | 🔴 |
+> |---|---|---|
+> | **D1** texto em parágrafos sem âncora local (teste de substituição medido) | ≥ 30% | ≥ 45% |
+> | **D2** seção/H2 inteira sem âncora local | — | qualquer uma |
+> | **D3** clichê de operadora/regulatório | 1-5 inline | parágrafo inteiro, ou > 5 |
+> | **D4** sobreposição de shingles de 8 palavras com artigo irmão | ≥ 8% | ≥ 15% ou trecho literal ≥ 40 palavras |
+> | **D5** title/meta no teste de substituição | ausentes | servem para qualquer praça |
 >
 > ```
-> python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_modelos.py <state_file.md|PLANO_MODELOS_[slug].md> [city|tr|pillar|hospital]
+> python -X utf8 ...\checkpoint_doorway_final.py <artigo.html> --cidade "Piracicaba" --ancoras ancoras.txt --outros irmao1.html irmao2.html --tipo city
 > ```
 >
-> Reprova (🔴): agente obrigatório ausente · agente 🔒 abaixo de forte · par produtor/conferente no mesmo modelo · painel monomodelo · nenhum juiz diferente do editor-chefe · degrau inválido · linha inteira num modelo só sem `MODO: monomodelo`. Avisa (🟡): monomodelo declarado · rebaixamento sem motivo escrito · agente inexistente.
+> ### 6. Duas travas mecânicas novas, nos extremos da linha
+> - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS` (a única trava que roda antes de existir texto).
+> - `checkpoint_doorway_final.py` — **saída**, depois do portão humano (a única que roda no HTML final).
 >
 > ### O que a v7.2 NÃO faz
-> - **Não muda uma vírgula do artigo** — nem seção, nem ordem, nem schema, nem paleta, nem limites, nem anti-doorway, nem `[VERIFICAR]`.
-> - **Não mede execução.** Ela confere o **plano**; que o Agente 6 tenha mesmo rodado no modelo declarado é responsabilidade do orquestrador.
-> - **Não conserta pesquisa ruim.** Três juízes em três modelos discutem com elegância sobre um artigo errado — a trava contra isso continua sendo o `consultar_rede` e o Agente 6.
-> - **Não proíbe rodar com um modelo só** — exige declarar (`MODO: monomodelo`) e assumir o que se perde: mesmo modelo com prompt diferente **não** é modelo diferente; o ponto cego é do modelo, não do prompt. Aí o portão humano vale mais.
+> - **Não muda uma vírgula do artigo** — nem seção, nem ordem, nem schema, nem paleta, nem limites, nem `[VERIFICAR]`.
+> - **Não confunde mais agentes com mais qualidade.** O ganho vem da separação e do juízo adversarial, não do número de chamadas — tarefa pequena dividida entre agentes só queima token.
+> - **Não mede execução.** O `checkpoint_modelos.py` confere o **plano**; que o Agente 6 tenha rodado no modelo declarado é responsabilidade do orquestrador.
+> - **Não proíbe rodar com um modelo só** — exige declarar (`MODO: monomodelo`) e assumir o que se perde: mesmo modelo com prompt diferente **não** é modelo diferente.
+> - **A varredura final mede originalidade, não utilidade.** Texto original, bem ancorado e inútil passa — contra isso valem o CI-2 e o painel.
 >
-> **Arquivos novos:** `references/modelos-agentes.md`, `checkpoint_modelos.py`.
-> **Modificados:** `SKILL.md` (bloco V7.2 + seção "MULTI-AGENTES EM MODELOS DIFERENTES [V7.2]" + Estágio 0 da linha + painel de juízes + trava de pré-voo), `references/pesquisa.md` (seção 10 do state file).
+> **Arquivos novos:** `references/modelos-agentes.md`, `references/doorway-final.md`, `checkpoint_modelos.py`, `checkpoint_doorway_final.py`.
+> **Modificados:** `SKILL.md` (bloco V7.2 + seção "ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO" + contrato do orquestrador + linha por padrão + Estágio 0 com o Agente 22 + Agente 21 no portão final + painel de juízes + duas travas na lista de bloqueios), `references/pesquisa.md` (seção 10 do state file).
 >
-> **Efeito esperado, dito sem exagero:** roteamento de modelo reduz erro correlacionado e desperdício de token — **não** melhora pesquisa, nem escreve melhor. O que ganha posição continua sendo tudo o mais que a skill já fazia.
+> **Efeito esperado, dito sem exagero:** separação de função e de modelo reduz erro correlacionado e dado inventado; a varredura final reduz doorway que entra depois das auditorias. **Nenhuma das duas escreve melhor** — o que ganha posição continua sendo tudo o mais que a skill já fazia.
 
 # Base v7 (continua valendo)
 

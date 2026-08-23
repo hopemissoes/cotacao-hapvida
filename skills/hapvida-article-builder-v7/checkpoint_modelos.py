@@ -39,12 +39,12 @@ PADRAO = {
     "11": "forte", "19": "medio", "20": "barato",
     "12": "forte", "13": "forte", "14": "medio", "15": "forte",
     "16a": "forte", "16b": "forte", "16c": "forte",
-    "17": "medio", "18": "barato", "22": "barato",
+    "21": "forte", "17": "medio", "18": "barato", "22": "barato",
 }
 
 # 🔒 não aceitam rebaixamento (T1)
 TRAVADOS = {"0", "ci-1", "ci-2", "5", "6", "11", "12", "13", "15",
-            "16a", "16b", "16c"}
+            "16a", "16b", "16c", "21"}
 
 # Pares (produtor, conferente) que precisam diferir de MODELO (T2)
 PARES = [
@@ -55,6 +55,7 @@ PARES = [
     ("10", "11", "redator Bloco C x editor-chefe"),
     ("11", "19", "editor-chefe x voz humana"),
     ("5", "13", "fio condutor x anti-doorway"),
+    ("13", "21", "anti-doorway na producao x varredura final"),
 ]
 
 JUIZES = ("16a", "16b", "16c")
@@ -63,7 +64,7 @@ EDITOR_FINAL = "11"   # quem assina o texto inteiro (T3)
 OBRIGATORIOS_BASE = [
     "1", "2", "3", "4", "ci-1", "ci-2", "5", "6", "7",
     "8", "9", "10", "11", "12", "13", "14", "15",
-    "16a", "16b", "16c", "18",
+    "16a", "16b", "16c", "21", "18",
 ]
 # Por tipo de artigo
 OBRIGATORIOS_EXTRA = {

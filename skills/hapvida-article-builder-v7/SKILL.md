@@ -10,18 +10,21 @@ description: >
   logo depois dela, e só então o formulário de cotação e o resto da análise de preço; a
   imagem da tabela desce para o fim da seção de preço (v7.1). Os H2 de preço/tabela têm
   prioridade de ordem sobre todos os demais H2. Trava: checkpoint_preco_primeiro.py.
-  [V7.2] ACRESCENTA a camada MULTI-AGENTES EM MODELOS DIFERENTES: cada um dos 22
-  agentes da linha roda no modelo escolhido pelo CUSTO DO ERRO (forte/médio/barato),
-  quem confere nunca roda no mesmo modelo de quem produziu, e o painel de 3 juízes
-  passa a ter modelos distintos — é o que quebra o erro correlacionado que lente
-  distinta sozinha não quebra. Trava: checkpoint_modelos.py sobre o bloco
-  PLANO_MODELOS, antes de a linha ser disparada.
+  [V7.2] ACRESCENTA a ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO: artigo novo sai
+  automaticamente pela linha de 23 agentes (não é mais opt-in), com ORQUESTRADOR de
+  contrato escrito, PAINEL DE 3 JUÍZES em modelos distintos e roteamento de cada
+  agente pelo CUSTO DO ERRO (forte/médio/barato) — quem confere nunca roda no mesmo
+  modelo de quem produziu. E fecha o fluxo com a VARREDURA FINAL ANTI-DOORWAY
+  (Agente 21), obrigatória no HTML que vai ao ar. Travas: checkpoint_modelos.py
+  (pré-voo) e checkpoint_doorway_final.py (saída).
   USE SOMENTE sob pedido EXPLÍCITO da v7 — gatilhos: "v7", "versão 7", "builder v7",
   "preço primeiro", "tabela primeiro", "ordem preço-primeiro", "sumário depois da
   tabela", "H2 de preço primeiro", "multi-agente", "modelos diferentes", "qual
   modelo", "roteamento de modelo", "plano de modelos", "agente barato", "modelo
   forte", "custo da linha", "juiz em outro modelo", "erro correlacionado",
-  "monomodelo" — além dos gatilhos da v6/v5/v4/v3.
+  "monomodelo", "multiagente", "orquestrador", "painel de juízes", "varredura
+  final", "checa doorway no final", "detecta doorway" — além dos gatilhos da
+  v6/v5/v4/v3.
 ---
 
 # Hapvida Article Builder — PREÇO PRIMEIRO V7 (+ camada V7.2: multi-agentes em modelos diferentes)
@@ -50,25 +53,32 @@ description: >
 >
 > **➡️ Antes de produzir nesta v7, leia `references/preco-primeiro.md`.** As leituras da v6 (`voz-humana.md`, `geo-plataformas.md`, `imagem-automatica.md`, `artigo-pillar-produto.md`) continuam valendo.
 
-> ## ⭐ V7.2 — MULTI-AGENTES EM MODELOS DIFERENTES (camada nova; leia junto com a v7 acima)
+> ## ⭐ V7.2 — ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO + VARREDURA FINAL ANTI-DOORWAY (camada nova; leia junto com a v7 acima)
 >
-> A v7.1 fechou a **ordem** do artigo. A **v7.2** não toca em nenhuma linha do artigo: ela decide **em qual modelo cada agente da linha roda**. Tudo o que está escrito acima e abaixo continua valendo na íntegra.
+> A v7.1 fechou a **ordem** do artigo. A **v7.2** não muda uma linha do artigo: muda **como ele é produzido**. Tudo o que está escrito acima e abaixo continua valendo na íntegra.
 >
-> **O problema que ela resolve, dito como o próprio SKILL.md já admitia:** no painel de juízes está escrito *"como os três são o mesmo modelo, erro correlacionado (mesmo ponto cego) é risco real"*. A v3 respondeu com **lentes** distintas — cada juiz procurando outra coisa. Faltava a outra metade: **modelos** distintos. Lente separa o que cada juiz procura; **modelo separa o que cada juiz é incapaz de ver**. Sem isso, três juízes podem concordar com muita confiança no mesmo erro.
+> **O objetivo, em uma frase:** artigo mais completo e com dado mais verdadeiro — e a única forma conhecida de conseguir as duas coisas ao mesmo tempo é **tirar da mesma cabeça** quem produz, quem confere e quem julga.
 >
-> **O que a V7.2 acrescenta — três coisas:**
-> 1. **Roteamento por custo do erro.** Cada um dos 22 agentes ganha um degrau — **forte / médio / barato** — escolhido por *"se este agente errar, alguma trava pega?"*. Barato onde um `checkpoint_*.py` ou um conferente com a fonte na mão pega o erro; **forte onde o erro é de julgamento e sai publicado sem ninguém notar**. Doze agentes ficam **travados (🔒)** no degrau forte e não aceitam rebaixamento por economia.
-> 2. **Separação de modelo, além da separação de função.** A regra-mãe da linha ("quem inventa um dado nunca é quem confere esse dado") sobe um nível: **o conferente roda em modelo diferente do produtor** — 2×6, 4×7, 8/9/10×11, 11×19, 5×13 — e **pelo menos um juiz roda em modelo diferente do editor-chefe**.
-> 3. **`PLANO_MODELOS` + `checkpoint_modelos.py`.** O roteamento é declarado num bloco do state file pelo **Agente 22 (roteador)** e conferido **antes** de a linha ser disparada. Camada sem trava é camada dormente — esta skill já perdeu duas por isso.
+> **O que a V7.2 estabelece — quatro coisas:**
+>
+> 1. **A linha de agentes vira o PADRÃO, não um pedido.** Artigo novo do zero (city, hospital, TR, pillar) sai **automaticamente** pela linha de 23 agentes; edição pontual, consulta e auditoria avulsa saem em agente único. Capacidade que só roda quando alguém lembra é capacidade dormente — e o artigo novo é justamente o caso de maior custo de erro.
+> 2. **O ORQUESTRADOR ganha contrato escrito.** A sessão principal decide o roteamento, guarda o state file, **revisa toda saída de subagente antes de ela virar insumo**, segura os portões e resolve empate — e **não** executa tarefa em lote, **não** aprova o próprio trabalho, **não** repassa o histórico da conversa no lugar do bastão. *Ele é o único que vê tudo, e por isso é o único que não pode julgar sozinho.*
+> 3. **Multi-modelo: roteamento por custo do erro + separação de modelo.** Cada um dos 23 agentes roda no degrau **forte 🔒 / médio / barato** escolhido por *"se este agente errar, alguma trava pega?"*; **o conferente nunca roda no mesmo modelo do produtor** (2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**); e o **painel de juízes deixa de ser monocultura** — ≥ 2 modelos distintos e ≥ 1 juiz em modelo diferente do editor-chefe. O próprio SKILL.md já admitia o problema: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. **Lente separa o que cada juiz procura; modelo separa o que cada juiz é incapaz de ver.**
+> 4. **VARREDURA FINAL ANTI-DOORWAY — o novo Agente 21, obrigatório.** Última chamada antes de publicar, rodando **no artigo que vai ao ar**: trava mecânica (`checkpoint_doorway_final.py` — teste de substituição medido, seção sem âncora, clichê de operadora, sobreposição de shingles com os artigos irmãos, title/meta) **+** consulta ao banco (overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos). Reprovou, não publica.
+>
+> **Duas travas mecânicas novas, nos dois extremos da linha:**
+> - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS`. É a única trava da skill que roda antes de existir texto.
+> - `checkpoint_doorway_final.py` — **saída**, depois do portão humano. É a única que roda no HTML final.
 >
 > **Ressalvas (obrigatórias da V7.2):**
-> - **Degrau ≠ modelo.** O degrau diz quanto julgamento o assento exige; a coluna de modelo diz qual cérebro senta nele. Um juiz `forte | sonnet` continua sendo assento forte — só roda em outro modelo para não dividir ponto cego com o par que ele confere.
-> - **Nada de barateamento na verificação.** Agentes 0, CI-1, CI-2, 5, 6, 11, 12, 13, 15 e 16a-c são 🔒. Rebaixar um deles é exatamente a falsa economia que esta camada existe para impedir. Rebaixamento (só em agente não travado) **desce um degrau por vez** e vai com o motivo escrito.
-> - **Modelo barato nunca segura dado YMYL sem trava.** Rede assistencial, carência, coparticipação, preço e regra da ANS: médio ou forte, a não ser que um checkpoint reprove mecanicamente o erro possível.
-> - **Sessão com um modelo só é caso legítimo, mas tem de ser declarado** (`MODO: monomodelo`). O checkpoint passa com 🟡 — e a verdade que vem junto: **mesmo modelo com prompt diferente não é modelo diferente**; o ponto cego é do modelo, não do prompt. Em monomodelo o voto majoritário vale menos e o **portão humano vale mais**.
-> - **A v7.2 não muda uma vírgula do artigo** — não mexe em seção, ordem, schema, paleta, limites, anti-doorway nem `[VERIFICAR]`. É camada de produção, não de conteúdo.
+> - **Degrau ≠ modelo.** O degrau diz quanto julgamento o assento exige; a coluna de modelo diz qual cérebro senta nele. Um juiz `forte | sonnet` continua sendo assento forte — só roda em outro modelo para não dividir ponto cego com quem ele confere.
+> - **Nada de barateamento na verificação.** Agentes 0, CI-1, CI-2, 5, 6, 11, 12, 13, 15, 16a-c e **21** são 🔒. Rebaixamento (só em agente não travado) desce **um degrau por vez** e vai com o motivo escrito.
+> - **Modelo barato nunca segura dado YMYL sem trava.** Rede assistencial, carência, coparticipação, preço e regra da ANS: médio ou forte.
+> - **Sessão com um modelo só é caso legítimo, mas tem de ser declarado** (`MODO: monomodelo`). Mesmo modelo com prompt diferente **não** é modelo diferente — o ponto cego é do modelo, não do prompt. Aí o voto majoritário vale menos e o **portão humano vale mais**.
+> - **Mais agentes não é mais qualidade por si.** O ganho vem da **separação** (quem produz nunca confere) e do **julgamento adversarial**, não do número de chamadas. Dividir tarefa pequena entre agentes só queima token e contexto.
+> - **A v7.2 não muda o artigo** — não mexe em seção, ordem, schema, paleta, limites, anti-doorway de conteúdo nem `[VERIFICAR]`. É camada de produção.
 >
-> **➡️ Antes de disparar a linha de agentes nesta v7.2, leia `references/modelos-agentes.md`** (tabela de roteamento dos 22 agentes, as 8 travas, o formato do `PLANO_MODELOS` e como passar `model` no `Agent`/`Workflow`).
+> **➡️ Antes de disparar a linha nesta v7.2, leia `references/modelos-agentes.md`** (roteamento dos 23 agentes, as 8 travas, o `PLANO_MODELOS`, como passar `model` no `Agent`/`Workflow`) **e `references/doorway-final.md`** (a varredura do Agente 21, limiares e o que fazer com cada achado).
 
 # Base V6 (tudo abaixo continua valendo) — VOZ HUMANA + GEO POR PLATAFORMA + IMAGEM AUTOMÁTICA
 
@@ -360,6 +370,8 @@ Depois que o corpo do artigo está pronto, a skill oferece **três auditorias**,
 
 **Saída:** matriz de sobreposição (artigo × seções/FAQ parecidas) + lista de trechos doorway + correção (reescrever / virar bridge+link / eliminar), + veredito.
 
+> **[V7.2] Este modo agora tem uma versão mecânica e obrigatória no fim da linha.** O Modo 3 continua sendo a auditoria profunda sob pedido; a **varredura final do Agente 21** (`checkpoint_doorway_final.py` + as mesmas consultas ao banco) roda **sempre**, depois do portão humano, no HTML que vai ao ar. Ver `references/doorway-final.md`.
+
 ---
 
 ### MODO 4 — AUDITORIA GEO/AEO DE CITABILIDADE [V2 — exclusivo desta skill]
@@ -461,7 +473,37 @@ Gerado em: [data] · Próxima sessão deve focar em: [finalidade, se o usuário 
 
 > **Princípio:** separar funções = trava anti-alucinação. O pesquisador não se aprova sozinho; o redator não julga o próprio texto; quem checa doorway é outro agente. Cada dado passa pela mão de pelo menos dois agentes com interesses diferentes.
 
-**Gatilhos (só sob pedido explícito):** "linha de agentes", "agentes especialistas", "monta a equipe de agentes", "divide em agentes", "quebra em tarefas", "cada agente uma função", "quebra o cluster".
+**[V7.2] QUANDO A LINHA RODA — mudou: agora é o padrão, não um pedido.**
+
+| Situação | Como roda |
+|---|---|
+| **Artigo novo do zero** (city, hospital, TR, pillar) | **pela linha completa, automaticamente** — o usuário não precisa dizer "multiagente" |
+| Cluster/lote de cidades | pela linha, com o pré-passo de alocação anti-doorway |
+| Reescrita grande de artigo publicado | pela linha, a partir do Agente 0 (diagnóstico) |
+| Edição pontual, consulta, dúvida, auditoria avulsa | **agente único** — abrir a linha para trocar um parágrafo custa mais do que resolve |
+
+Os gatilhos antigos ("linha de agentes", "agentes especialistas", "monta a equipe de agentes", "divide em agentes", "quebra em tarefas", "cada agente uma função", "quebra o cluster") continuam valendo — mas agora servem para **pedir a linha fora do caso padrão**, não para ligá-la.
+
+> **Por que virou padrão:** a v3 deixou a linha como capacidade opcional e o resultado foi previsível — sob pressa, artigo importante saiu de agente único, que é a configuração em que a trava anti-alucinação não existe. **Capacidade que só roda quando alguém lembra é capacidade dormente** (a skill já perdeu duas camadas assim). O artigo novo é justamente o caso em que o custo do erro é maior e a memória é menor.
+
+### [V7.2] O ORQUESTRADOR (quem é você nesta linha)
+
+A linha tem 23 agentes e **um orquestrador — a sessão principal, você**. O papel é específico e limitado, e é o que separa "linha de montagem" de "vários agentes soltos":
+
+**O orquestrador FAZ:**
+- **Decide o roteamento** (com o Agente 22) e roda as travas de pré-voo.
+- **Guarda a fonte única da verdade:** o state file. Bastão de agente não altera o state file — quem escreve nele é o orquestrador, depois de conferir.
+- **Revisa TODA saída de subagente antes de ela virar insumo do próximo.** Bloco vindo de agente médio/barato que entra direto no artigo é dado não conferido entrando pela porta dos fundos.
+- **Segura os portões** (aprovação da pesquisa, de cada bloco, do artigo) e **escala ao humano** o que travou.
+- **Resolve empate:** achado com 2 votos de juiz contra 1, dois agentes discordando sobre um fato, refino que não converge.
+
+**O orquestrador NÃO FAZ:**
+- **Não executa tarefa em lote.** Se ele mesmo pesquisa, escreve e confere, a linha virou um agente só com mais passos — e a trava anti-alucinação sumiu.
+- **Não aprova o próprio trabalho.** O que ele escreveu (costura, decisão de `[VERIFICAR]`) vai para outro agente conferir.
+- **Não relê a conversa inteira para cada agente.** Cada um recebe **o bastão**, não o histórico — é isso que torna o agente barato viável e o contexto administrável.
+- **Não inventa dado para destravar.** Faltou dado, volta ao Estágio 1; não se preenche lacuna com plausibilidade.
+
+> **Regra de ouro do orquestrador:** *ele é o único que vê tudo, e por isso é o único que não pode julgar sozinho.* Ver o artigo inteiro dá contexto e tira distância — o painel de juízes existe justamente porque quem montou não enxerga o que faltou.
 
 ### Como os agentes conversam: a passagem de bastão
 
@@ -473,14 +515,14 @@ Cada agente, ao terminar, **escreve um bastão curto** (ver "PASSAGEM DE BASTÃO
 
 Cada caixinha é um agente. **Agentes do mesmo estágio podem rodar juntos; o que confere é SEMPRE um agente diferente de quem produziu.** Você pode dividir mais (ex.: separar "rede própria" de "rede credenciada") ou juntar, conforme o artigo.
 
-**[V7.2] Cada agente abaixo roda no modelo do seu degrau** — **forte 🔒 / médio / barato**, escolhido pelo custo do erro. A tabela completa (agente por agente, com o porquê) está em `references/modelos-agentes.md` §3; as travas de diversidade (conferente nunca no mesmo modelo do produtor; painel com modelos distintos) estão na §4. **A linha passa a ter 22 agentes** com o **Agente 22 — Roteador de modelos**, que escreve o `PLANO_MODELOS` e roda `checkpoint_modelos.py` ANTES do Estágio 1.
+**[V7.2] Cada agente abaixo roda no modelo do seu degrau** — **forte 🔒 / médio / barato**, escolhido pelo custo do erro. A tabela completa (agente por agente, com o porquê) está em `references/modelos-agentes.md` §3; as travas de diversidade (conferente nunca no mesmo modelo do produtor; painel com modelos distintos) estão na §4. **A linha passa a ter 23 agentes** (0 a 22) com dois assentos novos: o **Agente 22 — Roteador de modelos** (escreve o `PLANO_MODELOS` e roda `checkpoint_modelos.py` ANTES do Estágio 1) e o **Agente 21 — Varredura final anti-doorway** (a última chamada, DEPOIS do portão humano).
 
 **[V6] A linha tem 21 agentes** (era 18 na v5): entraram o **19 — Voz humana** e o **20 — Imagem da tabela** no estágio 3.6, e o **Agente 0 — Diagnóstico do pillar** quando o artigo é pillar já existente. Os estágios são: 1 pesquisa · 2 conferência · 3 redação · **3.6 voz e imagem [V6]** · 3.5 editor-chefe · 4 auditorias · 5 juízo adversarial.
 
 > **[V6] Por que os agentes novos existem, e não só as seções.** Esta skill já perdeu camada duas vezes por falta de agente: *"no duelo a linha esqueceu de usar a v2"* e *"[a citabilidade] no duelo ficou dormente"*. Os agentes seguem o roteiro **desta lista**, não as seções escritas em outro lugar do arquivo. **Camada sem agente é camada dormente** — por isso voz, imagem, fan-out, defensibilidade e citação por plataforma foram costurados agente por agente abaixo, e não só documentados.
 
 **ESTÁGIO 0 — ROTEAMENTO [V7.2] (antes de qualquer disparo)**
-- **Agente 22 — Roteador de modelos.** Escreve o bloco `PLANO_MODELOS` (seção 10 do state file) com um degrau e um modelo por agente e roda `python -X utf8 ...\checkpoint_modelos.py <state_file.md> [city|tr|pillar|hospital]`. **Reprovado = a linha não é disparada.** Se a sessão só tem um modelo, declara `MODO: monomodelo` e diz ao usuário o que se perde. → bastão: plano aprovado + o que foi rebaixado e por quê.
+- **Agente 22 — Roteador de modelos.** Escreve o bloco `PLANO_MODELOS` (em `PLANO_MODELOS_[slug].md`, copiado depois para a seção 10 do state file) com um degrau e um modelo por agente e roda `python -X utf8 ...\checkpoint_modelos.py <state_file.md> [city|tr|pillar|hospital]`. **Reprovado = a linha não é disparada.** Se a sessão só tem um modelo, declara `MODO: monomodelo` e diz ao usuário o que se perde. → bastão: plano aprovado + o que foi rebaixado e por quê.
 
 **ESTÁGIO 1 — PESQUISA (a Fase 0, repartida)**
 - **Agente 1 — Buscas e tipo de página:** roda `serp_local`, lê os 10 primeiros do Google e decide o **tipo de página** que o Google premia ali (guia de cidade / tabela de preço / hospital). → bastão: resultados + tipo.
@@ -545,13 +587,17 @@ Os dois agentes abaixo são **novos na v6** e existem por um motivo específico:
 - **REGRA DE PARADA (nunca girar infinito):** repetir painel→refino até (a) a **mediana** das **5 dimensões ≥ 8/10 e zero 🔴 confirmado por ≥2 juízes**, OU (b) **no máximo 2 rodadas** — então escalar ao portão humano dizendo o que travou e por quê.
 - **Fallback barato:** em artigo de baixo risco/baixo volume, 1 juiz só resolve; o painel de 3 é o padrão para artigo comercial relevante ou de alto risco (custo: 3× o juiz).
 - **[V4] Travas mecânicas = 🔴 automático (acima das notas dos juízes):** `checkpoint_completude.py` reprovado (artigo curto/raso/rede rasa), `checkpoint_verificar.py` reprovado (dado `[VERIFICAR]`/proibido) **e [V7] `checkpoint_preco_primeiro.py` reprovado (tabela fora do topo ou H2 de preço atrás de outro H2)** **bloqueiam a publicação independentemente das medianas** — nenhuma nota alta de juiz compra um artigo curto ou com dado proibido. Some-se a isso a conferência de rede COMPLETA pelo editor-chefe.
+- **[V7.2] Trava de saída (🔴 depois do portão humano, antes de publicar):** `checkpoint_doorway_final.py` reprovado — texto que sobrevive à troca de cidade acima do limite, seção inteira sem âncora local, clichê ocupando parágrafo, sobreposição ≥ 15% com artigo irmão (ou trecho literal ≥ 40 palavras), title/meta que servem para qualquer praça — **bloqueia a publicação**. Nenhuma nota de juiz compra seção sem âncora.
 - **[V7.2] Trava de pré-voo (🔴 antes do Estágio 1, não depois):** `checkpoint_modelos.py` reprovado — agente 🔒 rebaixado, conferente no mesmo modelo do produtor, painel monomodelo não declarado — **impede o disparo da linha**. É a única trava desta skill que roda antes de existir texto: depois do artigo pronto, o plano já foi executado e o relatório não conserta nada.
 - **[V6] Duas travas mecânicas novas, no mesmo nível (🔴 automático):**
   - **`checkpoint_voz.py` com qualquer 🔴** (gerúndio de arremate acima do orçamento, tríade, molde, marketing genérico) → bloqueia. Os 🟡 não bloqueiam, **mas o editor tem de dizer o que decidiu sobre cada um** — silêncio sobre 🟡 conta como pendência, não como aprovação.
   - **Artigo com seção de preço sem imagem gerada** (ou com imagem cujo nome cai no 301, ou com número que só existe na imagem/gráfico e não em texto) → bloqueia. Nota de juiz não compra imagem faltando nem número invisível para a IA.
 - 🚦 **PORTÃO HUMANO FINAL:** você aprova o artigo. Só depois disso:
+  - **[V7.2] Agente 21 — VARREDURA FINAL ANTI-DOORWAY (a última chamada, obrigatória).** Roda **no artigo que vai ser publicado**, não numa versão anterior dele. Modelo **forte 🔒** e obrigatoriamente **diferente do modelo do Agente 13** — quem auditou doorway durante a produção não assina a liberação. Duas metades: (a) a trava mecânica `checkpoint_doorway_final.py` (teste de substituição medido, seção sem âncora, clichê de operadora, sobreposição de shingles com os artigos irmãos, title/meta); (b) a consulta ao banco (`consultar_overlaps_doorway`, `consultar_cluster_completo`, `consultar_faqs_catalogo`, `consultar_pillars_proibicoes`, `consultar_saturacao_destinos`). **Reprovou, não publica** — volta ao agente da função e roda de novo. Procedimento completo, limiares e o que fazer com cada achado: `references/doorway-final.md`. → bastão: veredito LIBERADO/BLOQUEADO + saída da trava colada inteira.
   - **Agente 17 — Schema** (JSON-LD, execução separada, só quando você pedir "gera o schema").
   - **Agente 18 — Registro no banco** (`BD - criar`, após o artigo aprovado/publicado).
+
+> **[V7.2] Por que a varredura é a ÚLTIMA coisa, e não mais uma auditoria.** O Agente 13 audita enquanto o artigo se forma; entre ele e a publicação ainda acontecem o editor-chefe, o refino dos juízes e as correções do portão humano — e é aí que o dano entra: uma frase "resolvida" que virou genérica, um parágrafo colado de um artigo irmão para tapar buraco, uma seção que perdeu a âncora local na reescrita. **Doorway não mora no parágrafo, mora no conjunto — e o conjunto só existe no fim.**
 
 > **Por que isto vira estágio fixo:** no duelo, a superioridade da v3 só apareceu **depois** de o juiz adversarial pegar o que os agentes de função deixaram passar (o Madre Cecília disfarçado, o clichê de ANS, a data não confirmada). Sem o loop, a v3 não é melhor que a v1 de forma confiável. **Com o loop trancado aqui, é.** E o **painel de 3 juízes com lentes distintas + voto majoritário** (acima) torna o veredito robusto — um juiz pega o que o outro deixa passar, e nenhum achado isolado de um juiz só vira lei.
 
@@ -624,9 +670,31 @@ De: Agente [N] ([função]) → Para: Agente [N+1] ([função])
 
 ---
 
-## MULTI-AGENTES EM MODELOS DIFERENTES [V7.2 — exclusivo desta versão]
+## ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO [V7.2 — exclusivo desta versão]
 
-**Objetivo:** a linha de agentes da v3 separou **funções**. A v7.2 separa **modelos**. São coisas diferentes e as duas são necessárias: separar função impede que quem inventa um dado seja quem o aprova; separar modelo impede que os dois compartilhem o mesmo ponto cego. **➡️ Leitura obrigatória antes de disparar: `references/modelos-agentes.md`.**
+**Objetivo:** a linha de agentes da v3 separou **funções**. A v7.2 separa **modelos**, torna a linha o **padrão** para artigo novo, dá **contrato escrito ao orquestrador** e fecha o fluxo com uma **varredura final anti-doorway**. São coisas diferentes e todas necessárias: separar função impede que quem inventa um dado seja quem o aprova; separar modelo impede que os dois compartilhem o mesmo ponto cego; a varredura final impede que o dano introduzido *depois* das auditorias chegue ao ar. **➡️ Leitura obrigatória antes de disparar: `references/modelos-agentes.md` e `references/doorway-final.md`.**
+
+### O desenho em uma imagem
+
+```
+[22 roteador] → PLANO_MODELOS → checkpoint_modelos.py 🔴 pré-voo
+      ↓
+ORQUESTRADOR (state file · revisão de toda saída · portões · empate)
+      ↓
+E1 pesquisa 1-5 + CI-1/CI-2   →  E2 conferência 6-7   →  E3 redação 8-10
+      ↓                                                        ↓
+E3.5 editor-chefe 11  →  E3.6 voz 19 · imagem 20  →  E4 auditorias 12-15
+      ↓
+E5 PAINEL DE 3 JUÍZES (lentes distintas + MODELOS distintos) → refino dirigido
+      ↓
+🚦 PORTÃO HUMANO
+      ↓
+[21 varredura final anti-doorway] → checkpoint_doorway_final.py 🔴 saída
+      ↓
+17 schema · 18 registro no banco
+```
+
+**As duas travas mecânicas novas ficam nos extremos** — uma antes de existir texto, outra depois de o texto estar pronto. Todas as outras travas da skill continuam no meio, onde sempre estiveram.
 
 ### O critério (uma frase)
 
@@ -672,10 +740,26 @@ python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoi
 
 Roda **antes** do Estágio 1, pelo **Agente 22**. Reprova (🔴): agente obrigatório ausente · agente 🔒 abaixo de forte · par produtor/conferente no mesmo modelo · painel monomodelo · nenhum juiz diferente do editor-chefe · degrau inválido · linha inteira num modelo só sem `MODO: monomodelo` declarado. Avisa (🟡): monomodelo declarado · rebaixamento sem motivo escrito · agente inexistente no plano.
 
+### O painel de juízes (o que muda na prática)
+
+O painel de 3 com lentes A/B/C e voto majoritário continua **exatamente** como está descrito no Estágio 5. A v7.2 acrescenta três regras:
+
+1. **≥ 2 modelos distintos** entre 16a/16b/16c, e **≥ 1 juiz em modelo diferente do editor-chefe (11)**.
+2. **Achado de VOZ apontado só por um juiz que roda no mesmo modelo do editor-chefe não conta voto** — é o ponto cego compartilhado se auto-aprovando.
+3. **O "fallback barato de 1 juiz" fica restrito** a artigo de baixo risco e baixo volume. Artigo comercial de cidade, pillar de produto e qualquer artigo com preço em tela **rodam o painel de 3** — é o estágio onde a qualidade é comprada, e é justamente onde a economia sai mais cara.
+
+### A varredura final anti-doorway (Agente 21)
+
+Última chamada, obrigatória, **no HTML que vai ao ar**. Metade mecânica (`checkpoint_doorway_final.py`: D1 teste de substituição medido · D2 seção sem âncora · D3 clichê de operadora · D4 sobreposição de shingles com os irmãos · D5 title/meta) e metade de banco (overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos). Reprovou, volta ao agente da função e roda de novo — **schema e registro só acontecem depois do LIBERADO**.
+
+**A regra que evita a correção cosmética:** âncora local é **fato que só vale naquela praça**, não menção ao nome da cidade. O script conta o nome da cidade como âncora; por isso o julgamento do Agente 21 vem **depois** dele, nunca no lugar dele — parágrafo que só passou porque repete "Piracicaba" duas vezes é reprovado pelo agente, mesmo com o script aprovando.
+
 ### Honestidade sobre o limite desta camada
 
 - **Ela não mede execução.** O checkpoint confere o **plano**; que o Agente 6 tenha mesmo rodado no modelo declarado é responsabilidade do orquestrador.
 - **Monomodelo não é fracasso — é um regime com menos garantia.** Declare, mantenha lentes e rodadas separadas, e trate o portão humano como obrigatório de verdade.
+- **A varredura final mede originalidade, não utilidade.** Ela pega repetição, ausência de âncora e clichê catalogado; **não** pega texto original, bem ancorado e mesmo assim inútil — artigo que responde uma pergunta que ninguém faz. Contra isso vale o CI-2 e o painel, lá atrás.
+- **Mais agentes não é mais qualidade.** O ganho vem da separação e do juízo adversarial, não do número de chamadas.
 - **Modelo diferente não conserta pesquisa ruim.** Se o Estágio 1 entregou rede incompleta, três juízes em três modelos vão discutir com elegância sobre um artigo errado. A trava contra isso continua sendo o `consultar_rede` e o Agente 6 — não o roteamento.
 
 ---
@@ -1322,6 +1406,18 @@ python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoi
 5. Depois do upload, o `curl -sSI` voltou **200** — inclusive nas variações `-1024x1024` e `-scaled`?
 
 Faltando qualquer um: não entregar como pronto. Ver `references/imagem-automatica.md`.
+
+### CHECKPOINT [V7.2] — DOORWAY FINAL (o último de todos)
+
+**Roda depois do portão humano, no HTML que vai ao ar** — pelo **Agente 21**, em modelo diferente do Agente 13.
+
+```bash
+python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_doorway_final.py <artigo.html> --cidade "Piracicaba" --ancoras <ancoras.txt> --outros <irmao1.html> <irmao2.html> --tipo city
+```
+
+Reprova (🔴): **D1** ≥ 45% do texto em parágrafos sem âncora local · **D2** qualquer seção/H2 sem uma única âncora local · **D3** clichê de operadora ocupando parágrafo inteiro (ou > 5 ocorrências) · **D4** ≥ 15% de sobreposição de shingles com um artigo irmão, ou trecho literal ≥ 40 palavras · **D5** title/meta que servem para qualquer praça. Avisa (🟡): D1 ≥ 30%, D4 ≥ 8%, varredura rodada sem `--outros`.
+
+**A trava mede o texto; o Agente 21 mede o site** (banco: overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos). Aprovar exige as duas metades. **Âncora local é fato que só vale naquela praça — repetir o nome da cidade não ancora nada**, e é por isso que o julgamento do agente vem depois do script, nunca no lugar dele. Ver `references/doorway-final.md`.
 
 ### REGRA DE BULLETS
 
