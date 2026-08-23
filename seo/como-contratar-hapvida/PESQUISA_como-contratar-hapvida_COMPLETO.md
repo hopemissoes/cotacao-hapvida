@@ -431,3 +431,80 @@ garantido
 3. Spoke candidato: "Plano de saúde para MEI Hapvida — documentos e prazo de CNPJ".
 4. Spoke candidato: "Hapvida por adesão — como funciona".
 5. Preencher `rank_math_title` e `rank_math_description` (hoje vazios).
+
+
+---
+
+## 12. ADENDO PÓS-APROVAÇÃO — redesenho da tabela do topo (23/08/2026)
+
+Registrado **depois** do aval do usuário, por causa de duas evidências novas colhidas na produção. O
+desenho da §5.1 foi ajustado; nada mais do state file mudou.
+
+### 12.1 Evidência 1 — os shortcodes `_0` NÃO satisfazem a trava da v7
+Lendo o código de `checkpoint_preco_primeiro.py`, o padrão que ele aceita como "tabela" é:
+
+```
+\[[a-z0-9\-]+_(?:menortabela|(?:ind|emp)_[a-z]+(?:total|parcial))\](?!_)
+```
+
+Ou seja: só **shortcode de tabela inteira**. Os de valor pontual com sufixo `_0`..`_9` são
+explicitamente excluídos (`RE_SHORTCODE_PONTUAL`, comentário no próprio arquivo: "NÃO conta como
+tabela"). A tabela por modalidade montada só com `_0`, como estava na §5.1, **falharia a regra 1** —
+o artigo seria dado como "sem tabela de preço".
+
+### 12.2 Evidência 2 — o padrão de shortcode não é uniforme entre praças
+Verificação em 7 artigos publicados (leitura ao vivo via MCP WordPress):
+
+| Shortcode | Situação |
+|---|---|
+| `[belo-horizonte_emp_ambulatorialtotal_0]` | **confirmado ao vivo** — artigo 6173 (pillar Empresarial), 2× |
+| `[belo-horizonte_emp_ambulatorialtotal]` | **confirmado ao vivo** — artigo 19785 (pillar Tabela de Preços), 2× |
+| `[belo-horizonte_ind_ambulatorialtotal]` | **confirmado ao vivo** — artigo 8766 (pillar Individual), 2× |
+| `[fortaleza_ind_ambulatorialtotal]` | **confirmado ao vivo** — artigo 37939 |
+| `[fortaleza_menorvalor]`, `[sao-paulo_menorvalor]` | confirmados ao vivo |
+| `[belo-horizonte_ind_ambulatorialtotal_0]`, `[belo-horizonte_ade_ambulatorialtotal_0]` | vistos só na cópia de junho dos pillars — **a confirmar** |
+| `[fortaleza_ind_ambulatorialtotal_0]`, `[fortaleza_emp_ambulatorialtotal_0]`, `[sao-paulo_emp_ambulatorialtotal_0]` | **não existem em nenhum artigo lido** |
+
+São Paulo empresarial usa outra família inteira: `[sao-paulo_pme_enfermariatotal_3]` / `_9`.
+Conclusão: a tabela por modalidade × 3 praças da §5.1 **não é montável com segurança**. Fortaleza e
+São Paulo saem.
+
+### 12.3 Evidência 3 — o pillar de preço já tem a tabela de modalidades (risco de doorway)
+Leitura ao vivo de `/tabela-de-preco-hapvida/` (artigo 19785): ele contém a passagem *"A Hapvida
+trabalha com três modalidades de contratação... A tabela abaixo resume os valores de entrada"*,
+seguida de uma tabela Modalidade × A partir de com valores de Belo Horizonte. A tabela da §5.1 seria
+um quase-clone dela — doorway contra o pillar irmão.
+
+Dois achados colaterais nesse pillar, a reportar como pendência (fora do escopo deste artigo):
+- a tabela dele hoje está com **preços fixos digitados** (R$ 71,98, R$ 116,11, R$ 90,63, R$ 110,50,
+  R$ 171,46, R$ 113,54) no lugar dos shortcodes que a cópia de junho tinha — fere a regra da skill de
+  nunca hardcodar preço;
+- ele tem um H2 **"Como Contratar o Plano Hapvida pelo Melhor Valor"**, que encosta no tema deste artigo.
+
+### 12.4 O desenho que substitui a §5.1
+
+**P3↑a (antes do sumário)** — H2 "Quanto Custa Contratar o Plano Hapvida" + 1 parágrafo de contexto +
+**`[belo-horizonte_emp_ambulatorialtotal]`** (tabela cheia, praça de referência declarada). É o que
+satisfaz a regra 1 da v7 e é exatamente a bridge que o banco recomenda para essa proibição
+("usar shortcode + link"), em vez de reproduzir a tabela à mão.
+
+**P3↑b (depois do sumário)** — a **tabela por modalidade**, que é o recorte próprio deste artigo:
+eixo em *requisito de contratação*, não em escada de preço.
+
+| Porta de entrada | Quem pode contratar | Mínimo | A partir de |
+|---|---|---|---|
+| Pessoa física | Qualquer pessoa, sem exigência de vínculo | 1 vida | `[belo-horizonte_ind_ambulatorialtotal_0]` |
+| CNPJ (MEI incluído) | Empresa ou MEI com CNPJ ativo há 6 meses | 2 vidas | `[belo-horizonte_emp_ambulatorialtotal_0]` |
+| Coletivo por adesão | Filiado a sindicato, conselho ou associação | 1 vida | `[belo-horizonte_ade_ambulatorialtotal_0]` |
+
+**Tensão declarada, não escondida:** renderizar `[belo-horizonte_emp_ambulatorialtotal]` aqui exibe a
+mesma tabela que o pillar de preço exibe. A v7 exige tabela no topo; o banco proíbe reproduzir a
+tabela de faixa etária. O desempate é que a bridge recomendada pelo próprio banco para essa proibição
+é "usar shortcode + link", e é isso que está sendo feito — com link para o pillar na leitura da
+tabela. Se o usuário preferir eliminar a sobreposição, a alternativa é trocar a praça de referência
+(usar `[fortaleza_ind_ambulatorialtotal]`, que o pillar de preço não usa) — decisão dele.
+
+### 12.5 Confirmação ainda pendente com o usuário
+Dois shortcodes da tabela por modalidade não foram vistos ao vivo:
+`[belo-horizonte_ind_ambulatorialtotal_0]` e `[belo-horizonte_ade_ambulatorialtotal_0]`.
+Se algum não renderizar, a linha correspondente sai da tabela — linha quebrada não vai ao ar.
