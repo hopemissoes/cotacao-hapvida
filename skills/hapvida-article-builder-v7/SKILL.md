@@ -15,7 +15,11 @@ description: >
   contrato escrito, PAINEL DE 3 JUÍZES em modelos distintos e roteamento de cada
   agente pelo CUSTO DO ERRO (forte/médio/barato) — quem confere nunca roda no mesmo
   modelo de quem produziu. E fecha o fluxo com a VARREDURA FINAL ANTI-DOORWAY
-  (Agente 21), obrigatória no HTML que vai ao ar. Travas: checkpoint_modelos.py
+  (Agente 21), obrigatória no HTML que vai ao ar. E ENDURECE A FASE 0: o
+  checkpoint_fase0.py passa a contar dado preenchido (unidades, FAQ, fontes primárias,
+  nível 1-2, datas) em vez de procurar palavras, com consultar_rede antes da web,
+  Parte 7 de dado proprietário e as seções 9 (FORBIDDEN_TOKENS) e 11 (datas)
+  obrigatórias. Travas: checkpoint_fase0.py (entrada), checkpoint_modelos.py
   (pré-voo) e checkpoint_doorway_final.py (saída).
   USE SOMENTE sob pedido EXPLÍCITO da v7 — gatilhos: "v7", "versão 7", "builder v7",
   "preço primeiro", "tabela primeiro", "ordem preço-primeiro", "sumário depois da
@@ -66,7 +70,10 @@ description: >
 > 3. **Multi-modelo: roteamento por custo do erro + separação de modelo.** Cada um dos 23 agentes roda no degrau **forte 🔒 / médio / barato** escolhido por *"se este agente errar, alguma trava pega?"*; **o conferente nunca roda no mesmo modelo do produtor** (2×6 · 4×7 · 8/9/10×11 · 11×19 · 5×13 · **13×21**); e o **painel de juízes deixa de ser monocultura** — ≥ 2 modelos distintos e ≥ 1 juiz em modelo diferente do editor-chefe. O próprio SKILL.md já admitia o problema: *"como os três são o mesmo modelo, erro correlacionado é risco real"*. **Lente separa o que cada juiz procura; modelo separa o que cada juiz é incapaz de ver.**
 > 4. **VARREDURA FINAL ANTI-DOORWAY — o novo Agente 21, obrigatório.** Última chamada antes de publicar, rodando **no artigo que vai ao ar**: trava mecânica (`checkpoint_doorway_final.py` — teste de substituição medido, seção sem âncora, clichê de operadora, sobreposição de shingles com os artigos irmãos, title/meta) **+** consulta ao banco (overlaps, FAQs do catálogo, proibições de pillar, saturação de destinos). Reprovou, não publica.
 >
-> **Duas travas mecânicas novas, nos dois extremos da linha:**
+> 5. **A FASE 0 endurecida — a trava passou a contar dado, não palavra.** O `checkpoint_fase0.py` procurava vocabulário ("volume", "rede", "diferenci"): um state file com o gabarito vazio, 516 bytes, passava com **APROVADO em todos os itens**. Reescrito, ele conta unidades com endereço e fonte, FAQ, secundárias com veto, URLs primárias, dados de nível 1-2 e datas de coleta — e reprova gabarito não preenchido, `fonte:` vazia, rede coletada há mais de 180 dias e ausência do bloco `FORBIDDEN_TOKENS` (sem o qual o `checkpoint_verificar.py` rodava desarmado). Junto vieram, no `references/pesquisa.md`: **`consultar_rede` antes da web** com a regra das duas listas, a **Parte 7 — dado proprietário** (as 6 chamadas de MCP que produzem o nível 1-2 que a v6 exigia sem dizer onde achar), a **Parte 8 — `nao_encontrado`** e as **seções 9 e 11** do state file.
+>
+> **Três travas mecânicas novas, cobrindo a linha inteira:**
+> - `checkpoint_fase0.py` (reescrito) — **entrada**, sobre o state file, antes de existir HTML.
 > - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS`. É a única trava da skill que roda antes de existir texto.
 > - `checkpoint_doorway_final.py` — **saída**, depois do portão humano. É a única que roda no HTML final.
 >
@@ -250,7 +257,7 @@ Only begin writing HTML after reading all reference files relevant to the curren
 - **Fase 0.2 — DR2 (posicionamento):** SEO semântico + keywords com volume real (`keyword_data`/`related_keywords`) · **[V5] Kit on-page: keyword principal definida + mínimo 6 secundárias com veto de intenção + mapa de cluster + rascunho de H1/title/meta com os posicionamentos** · diferenciais únicos (mín. 3) · FAQ local 15-20 (PAA via `related_keywords`, cruzado com `consultar_faqs_catalogo`) · validação anti-doorway (teste de substituição 70%+, 10+ dados únicos, 0 frase genérica). → **CHECKPOINT DR2 + PAUSA.**
 - **[V5] No DR1, registrar também o FORMATO DE SNIPPET** da SERP (parágrafo/lista/tabela + quem ocupa) — ver Regra de Ouro nº 2.
 - **Saída:** state file em `/mnt/user-data/outputs/PESQUISA_[slug]_COMPLETO.md` — é o "arquivo de pesquisa" que as Regras de Ouro nº 1, 2, 5 e os Blocos A/B/C consomem.
-- **GATE (trava mecânica — ver `references/pesquisa.md`):** antes de UMA linha de HTML, (1) o state file existe, (2) rodar `python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_fase0.py <caminho do state file>` e **colar a saída** — se não imprimir `✅ APROVADO`, PARAR, (3) o usuário aprovou explicitamente. Faltando qualquer um, parar.
+- **GATE (trava mecânica — ver `references/pesquisa.md`):** antes de UMA linha de HTML, (1) o state file existe, (2) rodar `python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_fase0.py <caminho do state file> [city|tr|pillar|hospital]` e **colar a saída** — se não imprimir `✅ APROVADO`, PARAR, (3) o usuário aprovou explicitamente. Faltando qualquer um, parar.
 
 > 🚫 **Pesquisa diagnóstica NÃO é Fase 0.** Rodar `serp_local`/`keyword_data`/`keyword_suggestions` avulsos ou olhar GSC/GA4 **não** autoriza HTML. É **proibido** dizer "já temos quase tudo" / "a pesquisa já está feita": ou o state file existe, passou no `checkpoint_fase0.py` e foi aprovado, ou a Fase 0 não foi feita. Se o usuário pedir o HTML direto, a resposta certa é rodar/mostrar o checkpoint e o que falta — **nunca** pular a trava para obedecer.
 
@@ -739,6 +746,18 @@ python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoi
 ```
 
 Roda **antes** do Estágio 1, pelo **Agente 22**. Reprova (🔴): agente obrigatório ausente · agente 🔒 abaixo de forte · par produtor/conferente no mesmo modelo · painel monomodelo · nenhum juiz diferente do editor-chefe · degrau inválido · linha inteira num modelo só sem `MODO: monomodelo` declarado. Avisa (🟡): monomodelo declarado · rebaixamento sem motivo escrito · agente inexistente no plano.
+
+### A Fase 0 endurecida (a etapa que era a menos travada)
+
+A pesquisa era a parte mais bem escrita e a **menos verificada** da skill: o roteiro pedia tudo, a trava conferia vocabulário. Provado no próprio repositório — um arquivo de 516 bytes contendo só as palavras certas passava com `✅ APROVADO` em todos os 14 itens.
+
+**O que a trava reescrita conta agora:** unidades com endereço preenchido (mín. 5 em city) · FAQ (mín. 15) · secundárias com veto de intenção (mín. 6) · URLs distintas (mín. 8) e domínios primários (mín. 3) · dados de nível 1-2 (mín. 3) · sub-perguntas de fan-out (mín. 5) · `dados_unicos` (mín. 10) · datas de coleta · `FORBIDDEN_TOKENS`. **E reprova** gabarito não preenchido, `fonte:` vazia, coleta de rede com mais de 180 dias e anti-doorway sem aprovação na própria linha do rótulo.
+
+**O que mudou no roteiro (`references/pesquisa.md`):**
+- **`consultar_rede` vem antes da web**, com a **regra das duas listas** (catálogo × guia oficial) decidindo o que pode ser afirmado, o que vira `[VERIFICAR]` de operação e o que vira pendência de catálogo. *Ausência no banco não é prova de ausência na rede.*
+- **Parte 7 — dado proprietário:** as seis chamadas (`consultar_rede`, `consultar_dados_canonicos`, `consultar_coparticipacao`, `cotador_fila`, `consultar_historico`/`consultar_artigo`, `gsc_queries_for_page`) que produzem o nível 1-2 exigido pela v6. **O cotador é o achado mais subestimado:** a SERP mostra o que buscam, o cotador mostra o que perguntam quando já estão comprando.
+- **Parte 8 — `nao_encontrado`:** busca sem resultado é resultado, e vira a lista que o Agente 6 usa contra o redator reinventar o dado.
+- **Seções 9 e 11 do state file** (tokens proibidos e datas de coleta) passaram de implícitas a obrigatórias.
 
 ### O painel de juízes (o que muda na prática)
 

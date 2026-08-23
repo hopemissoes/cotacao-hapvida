@@ -39,7 +39,25 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 > python -X utf8 ...\checkpoint_doorway_final.py <artigo.html> --cidade "Piracicaba" --ancoras ancoras.txt --outros irmao1.html irmao2.html --tipo city
 > ```
 >
-> ### 6. Duas travas mecânicas novas, nos extremos da linha
+> ### 6. A Fase 0 endurecida — a trava passou a contar dado, não palavra
+> A pesquisa era a etapa mais bem escrita e a **menos verificada**: o `checkpoint_fase0.py` procurava vocabulário ("volume", "rede", "diferenci"), então **um arquivo de 516 bytes com só as palavras certas passava com `✅ APROVADO` nos 14 itens**. Reescrito, ele conta:
+>
+> | Conta | Piso (city) |
+> |---|---|
+> | unidades com endereço preenchido | 5 |
+> | perguntas de FAQ | 15 |
+> | secundárias com veto de intenção | 6 |
+> | URLs distintas / domínios primários | 8 / 3 |
+> | dados de defensibilidade nível 1-2 | 3 |
+> | sub-perguntas de fan-out | 5 |
+> | dados únicos da praça | 10 |
+>
+> E **reprova**: gabarito não preenchido (`[X]`, `[fonte]`, `[cidade]`), `fonte:` vazia, coleta de **rede com mais de 180 dias**, anti-doorway sem aprovação na própria linha, e ausência do bloco `FORBIDDEN_TOKENS` — sem o qual o `checkpoint_verificar.py` rodava com a trava 3 **desarmada**, avisando num aviso que ninguém lia.
+>
+> No roteiro (`references/pesquisa.md`): **`consultar_rede` antes da web** com a regra das duas listas (catálogo × guia oficial); **Parte 7 — dado proprietário** com as 6 chamadas de MCP que produzem o nível 1-2 que a v6 exigia sem dizer onde achar (o `cotador_fila` é o mais subestimado: a SERP mostra o que buscam, o cotador mostra o que perguntam quando já estão comprando); **Parte 8 — `nao_encontrado`**; e as **seções 9 e 11** do state file. Também corrigido o comando do gate, que apontava para a pasta da **v5**.
+>
+> ### 7. Três travas mecânicas, cobrindo a linha inteira
+> - `checkpoint_fase0.py` (reescrito) — **entrada**, sobre o state file, antes de existir HTML.
 > - `checkpoint_modelos.py` — **pré-voo**, antes do Estágio 1, sobre o bloco `PLANO_MODELOS` (a única trava que roda antes de existir texto).
 > - `checkpoint_doorway_final.py` — **saída**, depois do portão humano (a única que roda no HTML final).
 >
@@ -51,7 +69,8 @@ Skill para produção de artigos HTML para tabelaplanos.com.br.
 > - **A varredura final mede originalidade, não utilidade.** Texto original, bem ancorado e inútil passa — contra isso valem o CI-2 e o painel.
 >
 > **Arquivos novos:** `references/modelos-agentes.md`, `references/doorway-final.md`, `checkpoint_modelos.py`, `checkpoint_doorway_final.py`.
-> **Modificados:** `SKILL.md` (bloco V7.2 + seção "ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO" + contrato do orquestrador + linha por padrão + Estágio 0 com o Agente 22 + Agente 21 no portão final + painel de juízes + duas travas na lista de bloqueios), `references/pesquisa.md` (seção 10 do state file).
+> **Reescrito:** `checkpoint_fase0.py`.
+> **Modificados:** `SKILL.md` (bloco V7.2 + seção "ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO" + contrato do orquestrador + linha por padrão + Estágio 0 com o Agente 22 + Agente 21 no portão final + painel de juízes + duas travas na lista de bloqueios), `references/pesquisa.md` (Fase 0 endurecida: ordem das fontes de rede, Partes 7 e 8, seções 9/10/11, gate corrigido).
 >
 > **Efeito esperado, dito sem exagero:** separação de função e de modelo reduz erro correlacionado e dado inventado; a varredura final reduz doorway que entra depois das auditorias. **Nenhuma das duas escreve melhor** — o que ganha posição continua sendo tudo o mais que a skill já fazia.
 

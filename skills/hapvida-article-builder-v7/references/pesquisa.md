@@ -6,12 +6,27 @@ A pesquisa deixou de ser uma skill separada (de alta fricção, 2 conversas, sem
 
 ---
 
+> ## ⭐ [V7.2] O QUE MUDOU NESTA FASE 0
+>
+> A pesquisa era a etapa mais bem escrita e a **menos travada** da skill: o roteiro pedia tudo, e a trava conferia quase nada. Seis mudanças, nenhuma delas cosmética:
+>
+> 1. **A trava passou a contar dado, não palavra.** `checkpoint_fase0.py` reescrito — o gabarito vazio que passava com APROVADO agora leva 10 bloqueios. Ver "GATE FINAL".
+> 2. **O catálogo do banco (`consultar_rede`) vem ANTES da web** na Parte 2, com a **regra das duas listas** (catálogo × guia oficial) decidindo o que pode ser afirmado.
+> 3. **Parte 7 — coleta de dado proprietário (nível 1-2)**, com as seis chamadas de MCP. A v6 exigia ≥3 dados de nível 1-2 sem dizer onde achá-los.
+> 4. **Parte 8 — `nao_encontrado`**: busca sem resultado é resultado, e vira trava contra o redator "reinventar" o dado.
+> 5. **Seção 9 (`FORBIDDEN_TOKENS`) virou obrigatória** — sem ela o `checkpoint_verificar.py` roda com a trava 3 desarmada, avisando num aviso que ninguém lê.
+> 6. **Seção 11 (datas de coleta)** com política de validade: rede acima de 180 dias **reprova**. Rede envelhecida não faz o artigo mirar errado — faz ele mentir, e é YMYL.
+>
+> **O que NÃO mudou:** todo o roteiro DR1/DR2 anterior continua valendo integralmente. A v7.2 não corta pesquisa — ela impede que a pesquisa seja declarada feita sem ter sido.
+
+---
+
 ## REGRAS ANTI-ALUCINAÇÃO (valem em TODA a Fase 0 — inegociáveis)
 
 A pesquisa é o ponto onde a alucinação entra no artigo. Estas regras existem para fechar essa porta:
 
 1. **Todo dado entra no state file com um campo `fonte:` preenchido.** Sem fonte verificável → registrar como `[VERIFICAR: descrição]` e **NÃO** usar no artigo. Nunca preencher um número "porque parece certo".
-2. **Fontes válidas, em ordem de preferência:** (a) resultado do DataForSeo (guardar a keyword/`location_code` da chamada); (b) fonte primária via `web_fetch` (site oficial Hapvida/GNDI/Clinipam, CNES/DataSUS, IBGE, prefeitura); (c) dado canônico Hapvida via `consultar_dados_canonicos`/skill `hapvida-data`. Agregadores e blogs **não** são fonte de dado factual — no máximo pista a confirmar em fonte primária.
+2. **Fontes válidas, em ordem de preferência:** (a) resultado do DataForSeo (guardar a keyword/`location_code` da chamada); (b) fonte primária via `web_fetch` (site oficial Hapvida/GNDI/Clinipam, CNES/DataSUS, IBGE, prefeitura); (c) dado canônico Hapvida via `consultar_dados_canonicos`/skill `hapvida-data`. Agregadores e blogs **não** são fonte de dado factual — no máximo pista a confirmar em fonte primária. **[V7.2] Lista explícita do que a trava sinaliza:** ReclameAqui, consumidor.gov, Quora, Yahoo Respostas, Wikipedia, blogspot/Medium, Pinterest, Facebook e Instagram. Aparecer como `fonte:` de um dado é 🟡 no `checkpoint_fase0.py` — e deve virar ou uma fonte primária, ou um `[VERIFICAR]`, ou uma linha em `nao_encontrado`.
 3. **Números corporativos da Hapvida** (hospitais próprios, clínicas, beneficiários nacionais, coparticipação) vêm **sempre** da `hapvida-data`/`consultar_dados_canonicos` — **nunca** inventados nem inferidos da web.
 4. **Preços: NUNCA pesquisar nem cravar.** Vão por shortcode (ver `shortcodes.md`). A pesquisa não coleta valor de mensalidade.
 5. **Marco histórico / estrutura (leitos, salas, ano de fundação):** exigir **≥2 fontes independentes**; preferir a oficial. 1 fonte só → `[VERIFICAR]`.
@@ -86,7 +101,21 @@ keywords_dos_concorrentes: ["da 1.4 — lacunas para nós"]
 
 DataForSeo **não** faz isto — é `web_fetch` em fonte primária + Google Maps para validar endereço.
 
-**Fontes obrigatórias:** `https://www2.hapvida.com.br/unidades`, Google Maps. **Complementares:** redes sociais das unidades, notícias locais (inaugurações), site da prefeitura.
+**[V7.2] ORDEM OBRIGATÓRIA DAS FONTES — o catálogo vem primeiro.** A v6 mandava começar pela web e isso já custou caro (Piracicaba: a web e o concorrente perderam metade da rede). A ordem é:
+
+1. **`consultar_rede` (banco Supabase)** — fonte autoritativa das unidades próprias da cidade. É **dado de nível 1** (proprietário) e é o que define o *piso* da rede. **Nunca declarar "rede enxuta" sem o catálogo confirmar.**
+2. **Guia oficial** — `https://www2.hapvida.com.br/unidades` — para confirmar operação atual e endereço.
+3. **CNES/DataSUS** — para estrutura (tipo de estabelecimento, leitos) e para achar unidade que o catálogo não tem.
+4. **Google Maps** — só para validar endereço e horário.
+
+**Complementares (pista, nunca fonte):** redes sociais das unidades, notícias locais de inauguração, site da prefeitura.
+
+> **A regra das duas listas.** Toda unidade entra no state file com `no_catalogo: sim/não` e `no_guia_oficial: sim/não`. As três combinações que importam:
+> - **catálogo ✅ + guia ✅** → unidade confirmada, pode ser afirmada no artigo.
+> - **catálogo ✅ + guia ❌** → `[VERIFICAR]` de **operação**: o endereço pode ser citado, a atividade atual não pode ser afirmada (a lição do Diagnóstico Madre Cecília).
+> - **catálogo ❌ + guia ✅** → unidade real fora do banco: entra no artigo **e** vira pendência de atualização do catálogo (`adicionar_pendencia`).
+>
+> **Ausência no banco não é prova de ausência na rede** — o banco já se provou incompleto para credenciado. Ausência no banco é pergunta, não veredito.
 
 **Mapear TODAS as unidades próprias.** Hospitais (meta: toda unidade da cidade):
 ```yaml
@@ -191,6 +220,49 @@ fan_out:
 
 **Trava:** cobrir sub-pergunta **não** autoriza inflar o artigo com conteúdo nacional genérico (regra da v4: *profundidade ≠ conteúdo nacional*). Sub-pergunta sem resposta **local** vira link, nunca seção.
 
+### Parte 7 — [V7.2] COLETA DE DADO PROPRIETÁRIO (nível 1-2) — obrigatória
+
+A v6 já exigia **≥3 dados de nível 1-2** e que o ganho de informação do CI-2 saísse de nível 1 ou 2 — mas não dizia **onde buscá-los**, e o resultado previsível é a Fase 0 voltar cheia de nível 4-5 (dado público que a IA responde sozinha e o concorrente copia em dez minutos). Esta parte fecha isso: **é a única fonte de vantagem que não está na SERP**.
+
+**As seis consultas (MCP), todas com o resultado transcrito no state file:**
+
+| # | Chamada | O que rende | Nível |
+|---|---|---|---|
+| 1 | `consultar_rede` | rede própria conferida cidade a cidade | 1 |
+| 2 | `consultar_dados_canonicos` | número corporativo validado (nunca da web) | 1 |
+| 3 | `consultar_coparticipacao` | qual tabela vale nesta praça (1 ou 2) | 1 |
+| 4 | `cotador_fila` | **o que as pessoas dessa praça realmente perguntam/cotam** | 2 |
+| 5 | `consultar_historico` + `consultar_artigo` | o que já foi dito e o que mudou desde então | 1-2 |
+| 6 | `gsc_queries_for_page` (só se a URL já existe) | os termos reais que já trazem gente | 2 |
+
+**Regra de saída desta parte** — três linhas no state file, no mínimo:
+```yaml
+dado_proprietario:
+  - dado: "6 unidades próprias em [cidade], 2 fora do guia oficial"
+    origem: consultar_rede
+    defensibilidade: 1
+    vira: "S4 — rede, com a ressalva de operação"
+  - dado: "a dúvida nº 1 do cotador nesta praça é parto"
+    origem: cotador_fila
+    defensibilidade: 2
+    vira: "FAQ 1 + abertura citável da S4"
+```
+
+> **Por que o cotador é o achado mais subestimado.** SERP mostra o que as pessoas **buscam**; o cotador mostra o que elas **perguntam quando já estão comprando**. Nenhum concorrente tem isso, nenhuma IA responde sozinha, e é o material que faz a FAQ deixar de ser paráfrase de PAA. É o dado de nível 2 mais barato de coletar e o mais difícil de copiar.
+
+### Parte 8 — [V7.2] O QUE NÃO FOI ENCONTRADO (registro obrigatório)
+
+Busca sem resultado **é resultado** — e some da memória entre uma sessão e outra, fazendo a próxima repetir a mesma busca. Registrar:
+
+```yaml
+nao_encontrado:
+  - procurei: "ano de inauguração da unidade do Centro"
+    onde: "guia oficial, CNES, notícias locais, prefeitura"
+    conclusao: "não existe fonte pública — NÃO citar ano"
+```
+
+**Trava:** item em `nao_encontrado` **não** pode reaparecer como afirmação no artigo. É a lista que o Agente 6 usa para conferir o que o redator inventou de volta.
+
 ### ✅ CHECKPOINT DR1 — apresentar e PAUSAR
 ```
 SERP:        [ ] 10 concorrentes (serp_local)  [ ] gaps  [ ] oportunidades  [ ] lacunas de keyword (ranked_keywords)
@@ -198,6 +270,10 @@ Rede:        [ ] mín. 5 unidades com endereço  [ ] ≥1 hospital detalhado  [ 
 Contexto:    [ ] IBGE população c/ fonte  [ ] IDH c/ fonte  [ ] CNES leitos c/ fonte
 Hapvida:     [ ] opera desde [ano]  [ ] tipo de rede  [ ] beneficiários (se houver)
 [V6] Fan-out:[ ] 5-10 sub-perguntas listadas  [ ] cada uma classificada (aqui/cluster/pendência)
+[V7.2] Rede: [ ] `consultar_rede` rodado ANTES da web  [ ] cada unidade com no_catalogo/no_guia_oficial
+[V7.2] Proprietário: [ ] as 6 chamadas da Parte 7  [ ] ≥3 dados de nível 1-2 com "vira:" preenchido
+[V7.2] Não encontrado: [ ] lista `nao_encontrado` fechada (o que se procurou e não existe)
+[V7.2] Datas:  [ ] `coletado_em:` por frente de coleta (seção 11)
 Fontes citadas no total: [X]   |   Itens [VERIFICAR] pendentes: [X]
 ```
 **PAUSA.** Apresentar o resumo do DR1 e aguardar o "ok" do usuário antes de ir ao DR2.
@@ -335,10 +411,43 @@ Dados únicos (anti-doorway): [X]   |   Itens [VERIFICAR]: [X]
 [V6] Defensibilidade: [X] dados de nível 1-2 (mín. 3)   |   Ganho do CI-2 é nível: [1|2]
 Anti-doorway: APROVADO — [X]% perde sentido na troca, 0 frase genérica
 Fontes citadas: [X]
+[V7.2] Proprietário: [X] dados de nível 1-2 (mín. 3) — origens: [consultar_rede, cotador_fila...]
+[V7.2] Rede: [X] no catálogo + [X] só no guia oficial + [X] só no catálogo ([VERIFICAR] de operação)
+[V7.2] Não encontrado: [X] itens registrados   |   FORBIDDEN_TOKENS: [X] tokens (seção 9)
+[V7.2] Coleta: SERP [data] | rede [data] | contexto [data] (seção 11)
 [V7.2] Roteamento: PLANO_MODELOS aprovado — [X] agentes | [X] modelos distintos | modo: [multimodelo|monomodelo]
 ═══════════════════════════════════════════
 ```
 Este arquivo é a fonte única que o Bloco A, B, C e as Regras de Ouro consomem. **Os itens `[VERIFICAR]` NÃO entram no artigo** — ficam listados para o usuário confirmar ou descartar.
+
+**[V7.2] Seção 9 — `FORBIDDEN_TOKENS` (obrigatória).** Sem este bloco, o `checkpoint_verificar.py` roda **com a trava 3 desarmada** — ele mesmo avisa isso e ninguém lê o aviso. Um token exato por linha: tudo que a pesquisa provou que **não pode aparecer no artigo**.
+
+```
+FORBIDDEN_TOKENS:
+Hospital Independência
+2 credenciados
+UPA do Centro
+```
+
+**O que vira token proibido:** nome de unidade que a pesquisa descartou (existe em outra cidade, fechou, é de outra operadora); contagem que a pesquisa refutou ("2 credenciados" quando são 5); nome que o concorrente usa e nós copiaríamos sem querer; qualquer item da lista `nao_encontrado` que tenha nome próprio. **Se não houver nenhum, escreva `nenhum` e diga por quê** — bloco vazio é ambíguo entre "não há" e "esqueci".
+
+**[V7.2] Seção 11 — DATAS DE COLETA (obrigatória).** Uma linha `coletado_em:` por frente de coleta, com o rótulo em comentário:
+
+```
+coletado_em: 2026-08-20 # serp e keywords
+coletado_em: 2026-08-21 # rede
+coletado_em: 2026-08-19 # contexto local
+```
+
+**Política de validade** (a trava aplica):
+
+| Frente | 🟡 | 🔴 |
+|---|---|---|
+| SERP, keywords, concorrentes | > 90 dias | > 180 dias |
+| **Rede assistencial** | — | **> 180 dias** |
+| Contexto local (IBGE/CNES) | > 365 dias | — |
+
+> **Por que a rede tem regra própria e mais dura:** unidade abre, fecha e troca de endereço; SERP envelhecida faz o artigo mirar errado, rede envelhecida faz o artigo **mentir** — e é YMYL. Reaproveitar state file antigo é legítimo (a skill autoriza); reaproveitar **sem recoletar a rede** não é.
 
 **[V7.2] Seção 10 — `PLANO_MODELOS`.** O bloco de roteamento escrito pelo **Agente 22** em `PLANO_MODELOS_[slug].md` **antes** do Estágio 1 (e já aprovado pelo `checkpoint_modelos.py`) é **copiado para a seção 10 deste state file** assim que ele nasce. Não é decoração: é o que permite ao handoff, à auditoria e à próxima sessão saberem **em que modelo cada dado foi produzido e por qual modelo foi conferido**. Formato e travas em `references/modelos-agentes.md` §5-§6.
 
@@ -350,10 +459,32 @@ Este arquivo é a fonte única que o Bloco A, B, C e as Regras de Ouro consomem.
 
 Antes de UMA linha de HTML, **nesta ordem**:
 1. O state file `PESQUISA_<slug>_COMPLETO.md` existe em `/mnt/user-data/outputs/` com TODAS as partes do DR1 e DR2 acima.
-2. Rodar **`python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v5\checkpoint_fase0.py <caminho do PESQUISA_<slug>_COMPLETO.md>`** e **colar a saída na conversa**. Se não imprimir `✅ APROVADO`, **PARAR** — é proibido escrever HTML.
+2. Rodar **`python -X utf8 C:\Users\netop\.claude\skills\hapvida-article-builder-v7\checkpoint_fase0.py <caminho do PESQUISA_<slug>_COMPLETO.md> [city|tr|pillar|hospital]`** e **colar a saída na conversa**. Se não imprimir `✅ APROVADO`, **PARAR** — é proibido escrever HTML. *(O caminho apontava para a v5 até a v7.1 — corrigido na v7.2, junto com a reescrita da trava.)*
+
+   **[V7.2] O que essa trava passou a conferir.** Até a v7.1 ela procurava **palavras** no arquivo ("volume", "rede", "diferenci"): um state file com o gabarito vazio — 516 bytes, tudo em `[X]` — passava com APROVADO em todos os itens. Agora ela **conta dado preenchido** e reprova: gabarito não preenchido (marcadores `[X]`, `[fonte]`, `[cidade]` acima de 3), `fonte:` vazia, menos de 8 URLs distintas ou 3 domínios primários, rede rasa (< 5 unidades com endereço em city), FAQ abaixo do piso, < 6 secundárias com veto, < 3 dados de nível 1-2, < 5 sub-perguntas de fan-out, `dados_unicos` não declarado ou < 10, coleta vencida (seção 11), anti-doorway sem aprovação **na própria linha** do rótulo, e ausência do bloco `FORBIDDEN_TOKENS`. **Ela continua sem julgar qualidade** — 15 FAQ contadas não são 15 FAQ boas.
 3. O usuário aprovou **explicitamente** o state file (o `APROVADO` do script é só "processo cumprido"; não substitui o aval humano).
 
 Só com os três, iniciar o Bloco A. Faltando qualquer um, parar e fechar a lacuna — **nunca** "começar enquanto isso". Se o usuário pedir o HTML direto, a resposta correta é rodar/exibir o checkpoint e o que falta, não obedecer e pular a trava.
+
+---
+
+## [V7.2] QUEM COLETA O QUÊ (a Fase 0 repartida na linha de agentes)
+
+A Fase 0 **é** o Estágio 1 da linha. O mapa, para não sobrar parte órfã nem dois agentes coletarem a mesma coisa:
+
+| Parte da Fase 0 | Agente | Modelo |
+|---|---|---|
+| Parte 1 — SERP, tipo de página, snippet, canibalização | **1** | médio |
+| Parte 2 — rede (catálogo → guia → CNES → Maps) | **2** | médio |
+| Partes 3, 4, 5 — contexto, acessibilidade, concorrentes locais | **3** | barato |
+| Parte 6 — keywords, PAA e fan-out | **4** | barato → médio |
+| **Parte 7 — dado proprietário (as 6 chamadas de MCP)** | **2 + 4**, consolidado pelo **5** | médio |
+| **Parte 8 — `nao_encontrado`** | quem procurou **registra**; o **6** confere | — |
+| DR2 Partes 1-4 — kit on-page, diferenciais, FAQ, anti-doorway | **5** (com CI-1/CI-2 antes) | forte 🔒 |
+| Seção 9 `FORBIDDEN_TOKENS` | **6** (conferente) — nunca quem coletou | forte 🔒 |
+| Seção 11 datas | **22** (roteador) abre; cada agente carimba a sua | barato |
+
+**A trava de separação continua valendo aqui:** quem coletou a rede (Agente 2) **não** é quem fecha os tokens proibidos (Agente 6). Lista de proibição escrita por quem coletou é lista que protege o próprio erro.
 
 ---
 
