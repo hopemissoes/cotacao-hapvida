@@ -618,3 +618,57 @@ shortcode de tabela e o artigo usa `<table>` com shortcodes de valor. Três saí
 6. Corrigir o `RE_SHORTCODE_TABELA` do `checkpoint_preco_primeiro.py`.
 7. Registro do artigo 64 no Supabase incompleto (`h2s`, `faqs`, `links_saida`).
 8. `rank_math_title` e `rank_math_description` deste artigo estão **vazios**.
+
+---
+
+## 14. RODADA FINAL — FAQ REESCRITAS PARA SAIR DO CATÁLOGO (23/08/2026)
+
+Escopo declarado pelo usuário: **mexer só neste artigo.** As pendências que exigem editar o pillar
+de preço (item 13.6) ficam abertas e não foram tocadas.
+
+Seis perguntas davam match no catálogo do banco. Cada uma foi reescrita para responder à pergunta
+**de contratação** que só este artigo tem território para responder, em vez da pergunta genérica que
+já vive em outro lugar.
+
+| # | Antes (match no catálogo) | Agora | O que mudou de fato |
+|---|---|---|---|
+| 3 | MEI pode contratar plano empresarial Hapvida? *(id 7 — 4 cidades + pillar de preço)* | Abri o MEI este mês: quando posso contratar? | deixa de ser "se pode" e vira **quando**; a resposta agora diz que a contagem corre da abertura na Receita, não do primeiro faturamento |
+| 5 | Contratar por corretora custa mais caro? *(id 8 — pillar de preço FAQ #19)* | O que muda contratar pela corretora em vez do site da Hapvida? | deixa de ser pergunta de preço e vira **comparação de canal**, que é território da P2 deste artigo |
+| 9 | Até que idade posso contratar o plano individual? *(id 110 — categoria `doorway`)* | Tenho mais de 59 anos: muda alguma coisa na contratação? | deixa de ser "limite de idade" e vira **o que muda no processo**; corrige de quebra a afirmação YMYL sobre análise acima dos 70 |
+| 10 | Qual a diferença entre Nosso Plano, Mix e Pleno na hora de contratar? *(id 73)* | Preciso escolher o produto antes de pedir a cotação? | deixa de ser comparativo de produto e vira **ordem do processo**; os três produtos viram consequência, com link |
+| 17 | Posso contratar em uma cidade e usar em outra? *(id 28 — 6 artigos)* | Moro numa cidade e trabalho em outra: onde devo contratar? | deixa de ser sobre **uso** e vira sobre a **decisão de abrangência no momento de assinar** |
+| 1 | Quanto tempo leva para o plano ficar ativo? *(id 96)* | Quanto tempo leva para o plano ficar ativo, e de quando conta o prazo? | mantém o termo de busca e acrescenta a cláusula que a diferencia: o relógio começa na documentação completa |
+
+### Medição da sobreposição depois da reescrita
+
+Sobreposição de termos entre cada template do catálogo e a FAQ mais parecida do artigo:
+
+| id do catálogo | antes | depois |
+|---|---|---|
+| 7 (MEI empresarial) | match direto 🔴 | 67% 🟡 |
+| 8 (corretora mais cara) | match direto 🔴 | 40% 🟢 |
+| 28 (usar em outra cidade) | match direto 🔴 | 50% 🟡 |
+| 110 (limite de idade) | match 🔴 | 33% 🟢 |
+| 73 (Nosso Plano × Mix) | 🟡 | 17% 🟢 |
+| 72 (individual × empresarial) | 🟡 | 20% 🟢 |
+| 96 (tempo de aprovação) | 🟡 | 60% 🟡 |
+| 40 (migrar sem carência) | 🟡 | 40% 🟢 |
+
+**Zero 🔴.** Os três 🟡 restantes são resíduo da métrica, não do conteúdo: "MEI" e "contratar"
+aparecem nos dois lados porque o assunto é o mesmo — o que mudou é a pergunta respondida.
+
+### O que continua em aberto e NÃO foi tocado (fora do escopo pedido)
+
+1. **Sobreposição estrutural com `/tabela-de-preco-hapvida/`** — aquele pillar mantém a tabela
+   Modalidade × A partir de e o H2 "Como Contratar o Plano Hapvida pelo Melhor Valor". Enquanto os
+   dois existirem lá, duas URLs do site respondem à mesma pergunta.
+2. **Prazos de ativação divergentes entre artigos** — aqui 48h/10 dias úteis; Natal 24-48h;
+   Curitiba 1-3 e 3-5 dias. Só se resolve editando os outros.
+3. **Casa canônica das FAQ id 7 e id 8** — o catálogo as atribui ao pillar de preço.
+4. Os demais itens de 13.6.
+
+### Travas depois desta rodada
+
+completude ✅ (10 H2 · 22 H3 · 17 FAQ · 4.567 palavras) · voz `--rigor alto` ✅ · parágrafos ✅ ·
+ritmo ✅ · citabilidade ✅ · verificar ✅ · on-page ✅ · **preço-primeiro ❌ (só a regra 1, pelo
+motivo de regex de 13.1 — inalterado)**.
