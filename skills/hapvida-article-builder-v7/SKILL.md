@@ -1,34 +1,19 @@
 ---
 name: hapvida-article-builder-v7
 description: >
-  V7 (PREÇO PRIMEIRO) do hapvida-article-builder, tabelaplanos.com.br. Faz TUDO da v6
-  (voz humana, GEO por plataforma, defensibilidade do dado, imagem automática, UX de
-  conversão, arquétipo pillar P1-P9) e de toda a base v1-v5 (kit on-page, Fase 5 GSC,
-  landing, CI-1/CI-2, linha de agentes, GEO/AEO, city S1-S7, hospital HS1-HS4, TR1-TR5,
-  FASE 0, anti-doorway, schema) e ADICIONA UMA camada: ORDEM PREÇO-PRIMEIRO — a tabela
-  de preço é o primeiro conteúdo do artigo (logo após o Lead GEO), o SUMÁRIO vem colado
-  logo depois dela, e só então o formulário de cotação e o resto da análise de preço; a
-  imagem da tabela desce para o fim da seção de preço (v7.1). Os H2 de preço/tabela têm
-  prioridade de ordem sobre todos os demais H2. Trava: checkpoint_preco_primeiro.py.
-  [V7.2] ACRESCENTA a ORQUESTRAÇÃO MULTI-AGENTE E MULTI-MODELO: artigo novo sai
-  automaticamente pela linha de 25 agentes (não é mais opt-in), com ORQUESTRADOR de
-  contrato escrito, PAINEL DE 3 JUÍZES em modelos distintos e roteamento de cada
-  agente pelo CUSTO DO ERRO (forte/médio/barato) — quem confere nunca roda no mesmo
-  modelo de quem produziu. E fecha o fluxo com a VARREDURA FINAL ANTI-DOORWAY
-  (Agente 21), obrigatória no HTML que vai ao ar. E ENDURECE A FASE 0: o
-  checkpoint_fase0.py passa a contar dado preenchido (unidades, FAQ, fontes primárias,
-  nível 1-2, datas) em vez de procurar palavras, com consultar_rede antes da web,
-  Parte 7 de dado proprietário e as seções 9 (FORBIDDEN_TOKENS) e 11 (datas)
-  obrigatórias. Travas: checkpoint_fase0.py (entrada), checkpoint_modelos.py
-  (pré-voo) e checkpoint_doorway_final.py (saída).
-  USE SOMENTE sob pedido EXPLÍCITO da v7 — gatilhos: "v7", "versão 7", "builder v7",
-  "preço primeiro", "tabela primeiro", "ordem preço-primeiro", "sumário depois da
-  tabela", "H2 de preço primeiro", "multi-agente", "modelos diferentes", "qual
-  modelo", "roteamento de modelo", "plano de modelos", "agente barato", "modelo
-  forte", "custo da linha", "juiz em outro modelo", "erro correlacionado",
-  "monomodelo", "multiagente", "orquestrador", "painel de juízes", "varredura
-  final", "checa doorway no final", "detecta doorway" — além dos gatilhos da
-  v6/v5/v4/v3.
+  V7 do hapvida-article-builder para tabelaplanos.com.br: artigos HTML de cidade
+  (S1-S7), hospital (HS1-HS4), tabela regional (TR1-TR5) e pillar (P1-P9), com
+  toda a base v1-v6 (FASE 0, CI-1/CI-2, kit on-page, GEO/AEO, voz humana, imagem
+  da tabela, anti-doorway, schema). Camadas próprias: ORDEM PREÇO-PRIMEIRO (a
+  tabela de preço é o primeiro conteúdo, o sumário vem colado nela, H2 de preço
+  na frente) e [v7.2] ORQUESTRAÇÃO MULTIAGENTE E MULTIMODELO — linha de 25
+  agentes por padrão, orquestrador com contrato, juízes em modelos distintos,
+  PORTÃO DE PESQUISA com 2 juízes antes de escrever e VARREDURA FINAL
+  ANTI-DOORWAY antes de publicar, com travas mecânicas da pesquisa à publicação.
+  USE SOMENTE sob pedido explícito da v7 — gatilhos: "v7", "versão 7", "builder
+  v7", "preço primeiro", "tabela primeiro", "multiagente", "modelos diferentes",
+  "orquestrador", "painel de juízes", "portão de pesquisa", "varredura final",
+  "detecta doorway" — além dos gatilhos da v6/v5/v4/v3.
 ---
 
 # Hapvida Article Builder — PREÇO PRIMEIRO V7 (+ camada V7.2: multi-agentes em modelos diferentes)
