@@ -99,7 +99,7 @@
 }
 </style>
 
-<div id="drv-oft-busca">
+<div id="drv-oft-busca" class="drv-busca" data-net="all" data-total="147" data-ncid="22">
 <h2 id="busca-cidade" class="drv-titulo">Encontre o atendimento oftalmológico na sua cidade</h2>
 <p class="drv-sub">Digite a cidade — ou um procedimento, como catarata — para ver, num lugar só, as unidades próprias e credenciadas que atendem oftalmologia. São 147 unidades em 22 capitais.</p>
 <div style="width:60px;height:4px;background:linear-gradient(90deg,#ff6b00,#ff8533);border-radius:2px;margin-bottom:20px;"></div>
@@ -118,8 +118,8 @@
 </div>
 
 <div class="drv-meta">
-  <span id="drv-oft-counter" aria-live="polite"><b>147</b> unidades em <b>22</b> capitais</span>
-  <span id="drv-oft-hint">Mostrando todas</span>
+  <span class="drv-counter" aria-live="polite"><b class="drv-n-un">147</b> <span class="drv-w-un">unidades</span> em <b class="drv-n-cid">22</b> <span class="drv-w-cid">capitais</span></span>
+  <span class="drv-hint">Mostrando todas</span>
 </div>
 
 <div class="drv-results" id="drv-oft-results">
@@ -148,7 +148,7 @@
 </div>
 
 <div class="drv-empty" id="drv-oft-empty">
-  <h4>Nenhuma unidade encontrada para <span id="drv-oft-term"></span></h4>
+  <h4>Nenhuma unidade encontrada para <span class="drv-term" id="drv-oft-term"></span></h4>
   <p>Confira a grafia da cidade. Em Porto Velho, Macapá, Palmas, Boa Vista e Rio Branco a Hapvida ainda não tem rede oftalmológica estruturada — veja <a class="drv-in" href="#capitais-limitadas">capitais com cobertura limitada</a>.</p>
   <a class="drv-cta acao-abrir-popup" href="#">Falar com um consultor</a>
 </div>
@@ -160,66 +160,145 @@
 </div>
 
 <script>
+/* Busca de unidades — DRV. Escrito sem sinais de maior, menor e e-comercial,
+   para sobreviver a editores que escapam HTML. Usa delegacao de eventos:
+   funciona mesmo se o bloco for injetado depois que o script roda. */
 (function(){
-  var root=document.getElementById('drv-oft-busca');
-  if(!root)return;
-  var q=root.querySelector('#drv-oft-q');
-  var clear=root.querySelector('#drv-oft-clear');
-  var chips=root.querySelectorAll('.drv-chip');
-  var cards=root.querySelectorAll('.drv-card');
-  var unAll=root.querySelectorAll('.drv-hosp');
-  var counter=root.querySelector('#drv-oft-counter');
-  var hint=root.querySelector('#drv-oft-hint');
-  var empty=root.querySelector('#drv-oft-empty');
-  var term=root.querySelector('#drv-oft-term');
-  var TOTAL=unAll.length, NCID=cards.length;
-  var net='all';
-
-  function norm(s){return (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
-
-  function apply(){
-    var qn=norm(q.value);
-    clear.classList.toggle('on', q.value.length>0);
-    var visCidades=0, visUn=0;
-    for(var i=0;i<cards.length;i++){
-      var card=cards[i];
-      var lis=card.getElementsByClassName('drv-hosp');
-      var shown=0;
-      for(var j=0;j<lis.length;j++){
-        var li=lis[j];
-        var netOk=(net==='all')||(li.getAttribute('data-net')===net);
-        var qOk=(qn==='')||(li.getAttribute('data-s').indexOf(qn)>-1);
-        var ok=netOk&&qOk;
-        li.classList.toggle('drv-hidden', !ok);
-        if(ok){shown++;visUn++;}
-      }
-      if(shown>0){card.classList.remove('drv-hidden');visCidades++;
-        var c=card.querySelector('.drv-count');
-        if(c)c.textContent=shown+(shown===1?' unidade':' unidades');
-      }else{card.classList.add('drv-hidden');}
-    }
-    if(qn===''&&net==='all'){
-      counter.innerHTML='<b>'+TOTAL+'</b> unidades em <b>'+NCID+'</b> capitais';
-      hint.textContent='Mostrando todas';
-    }else{
-      counter.innerHTML='<b>'+visUn+'</b> '+(visUn===1?'unidade':'unidades')+' em <b>'+visCidades+'</b> '+(visCidades===1?'capital':'capitais');
-      hint.textContent= visCidades>0 ? 'Resultado da busca' : '';
-    }
-    if(visCidades===0){
-      term.textContent='\u201C'+q.value.trim()+'\u201D';
-      empty.classList.add('on');
-    }else{empty.classList.remove('on');}
+  function norm(s){
+    if(!s){ return ''; }
+    return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().trim();
   }
+  function lista(el, sel){
+    return Array.prototype.slice.call(el.querySelectorAll(sel));
+  }
+  function texto(el, valor){
+    if(el){ el.textContent = valor; }
+  }
+  function aplicar(root){
+    var input = root.querySelector('.drv-input');
+    var limpar = root.querySelector('.drv-x');
+    var rede = root.getAttribute('data-net');
+    if(!rede){ rede = 'all'; }
+    var bruto = '';
+    if(input){ bruto = input.value; }
+    var termo = norm(bruto);
+    if(limpar){ limpar.classList.toggle('on', bruto.length !== 0); }
 
-  q.addEventListener('input', apply);
-  clear.addEventListener('click', function(){q.value='';q.focus();apply();});
-  for(var k=0;k<chips.length;k++){
-    chips[k].addEventListener('click', function(){
-      for(var m=0;m<chips.length;m++){chips[m].classList.remove('is-on');chips[m].setAttribute('aria-pressed','false');}
-      this.classList.add('is-on');this.setAttribute('aria-pressed','true');
-      net=this.getAttribute('data-net');apply();
+    var visCid = 0;
+    var visUn = 0;
+    lista(root, '.drv-card').forEach(function(card){
+      var mostrados = 0;
+      lista(card, '.drv-hosp').forEach(function(li){
+        var ok = true;
+        if(rede !== 'all'){
+          if(li.getAttribute('data-net') !== rede){ ok = false; }
+        }
+        if(ok){
+          if(termo !== ''){
+            if(li.getAttribute('data-s').indexOf(termo) === -1){ ok = false; }
+          }
+        }
+        li.classList.toggle('drv-hidden', !ok);
+        if(ok){ mostrados = mostrados + 1; visUn = visUn + 1; }
+      });
+      if(mostrados === 0){
+        card.classList.add('drv-hidden');
+      }else{
+        card.classList.remove('drv-hidden');
+        visCid = visCid + 1;
+        texto(card.querySelector('.drv-count'),
+              mostrados + (mostrados === 1 ? ' unidade' : ' unidades'));
+      }
+    });
+
+    var filtrando = true;
+    if(termo === ''){
+      if(rede === 'all'){ filtrando = false; }
+    }
+    if(filtrando){
+      texto(root.querySelector('.drv-n-un'), String(visUn));
+      texto(root.querySelector('.drv-w-un'), visUn === 1 ? 'unidade' : 'unidades');
+      texto(root.querySelector('.drv-n-cid'), String(visCid));
+      texto(root.querySelector('.drv-w-cid'), visCid === 1 ? 'capital' : 'capitais');
+      texto(root.querySelector('.drv-hint'), visCid === 0 ? '' : 'Resultado da busca');
+    }else{
+      texto(root.querySelector('.drv-n-un'), root.getAttribute('data-total'));
+      texto(root.querySelector('.drv-w-un'), 'unidades');
+      texto(root.querySelector('.drv-n-cid'), root.getAttribute('data-ncid'));
+      texto(root.querySelector('.drv-w-cid'), 'capitais');
+      texto(root.querySelector('.drv-hint'), 'Mostrando todas');
+    }
+
+    var vazio = root.querySelector('.drv-empty');
+    if(vazio){
+      if(visCid === 0){
+        texto(root.querySelector('.drv-term'), '“' + bruto.trim() + '”');
+        vazio.classList.add('on');
+      }else{
+        vazio.classList.remove('on');
+      }
+    }
+  }
+  function raiz(el){
+    if(!el){ return null; }
+    if(!el.closest){ return null; }
+    return el.closest('.drv-busca');
+  }
+  document.addEventListener('input', function(e){
+    var el = e.target;
+    if(!el){ return; }
+    if(!el.classList){ return; }
+    if(!el.classList.contains('drv-input')){ return; }
+    var root = raiz(el);
+    if(root){ aplicar(root); }
+  });
+  document.addEventListener('click', function(e){
+    var el = e.target;
+    if(!el){ return; }
+    if(!el.closest){ return; }
+    var chip = el.closest('.drv-chip');
+    if(chip){
+      var r1 = raiz(chip);
+      if(r1){
+        lista(r1, '.drv-chip').forEach(function(c){
+          c.classList.remove('is-on');
+          c.setAttribute('aria-pressed', 'false');
+        });
+        chip.classList.add('is-on');
+        chip.setAttribute('aria-pressed', 'true');
+        r1.setAttribute('data-net', chip.getAttribute('data-net'));
+        aplicar(r1);
+      }
+      return;
+    }
+    var x = el.closest('.drv-x');
+    if(x){
+      var r2 = raiz(x);
+      if(r2){
+        var inp = r2.querySelector('.drv-input');
+        if(inp){ inp.value = ''; inp.focus(); }
+        aplicar(r2);
+      }
+    }
+  });
+  function ligar(){
+    lista(document, '.drv-busca').forEach(function(root){
+      if(root.getAttribute('data-pronto') === '1'){ return; }
+      root.setAttribute('data-pronto', '1');
+      aplicar(root);
     });
   }
+  ligar();
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', ligar);
+  }
+  window.addEventListener('load', ligar);
+  var tentativas = 0;
+  var timer = setInterval(function(){
+    tentativas = tentativas + 1;
+    ligar();
+    if(tentativas === 40){ clearInterval(timer); }
+  }, 300);
 })();
 </script>
 </section>
